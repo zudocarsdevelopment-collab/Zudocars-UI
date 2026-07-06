@@ -53,7 +53,8 @@ export default function Navbar() {
 
           <button
             onClick={() => setOpen(!open)}
-            className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            aria-label="Toggle menu"
+            className="lg:hidden p-2 rounded-lg bg-black text-white hover:bg-gray-900 transition-colors"
           >
             {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -66,20 +67,20 @@ export default function Navbar() {
           open ? 'max-h-96 border-b border-gray-100' : 'max-h-0'
         )}
       >
-        <div className="px-4 py-4 space-y-3 bg-white">
+        <div className="px-4 py-4 space-y-3 bg-white shadow-lg border-t border-gray-100">
           {navLinks.map((link) => (
             <a
               key={link.label}
               href={link.href}
               onClick={() => setOpen(false)}
-              className="block text-sm font-medium text-gray-600 hover:text-blue-600 py-2 transition-colors"
+              className="block text-base font-bold text-gray-900 hover:text-blue-600 py-3 transition-colors"
             >
               {link.label}
             </a>
           ))}
           <a
             href="#booking"
-            className="block bg-blue-600 text-white px-5 py-3 rounded-xl text-sm font-semibold text-center hover:bg-blue-700 transition-colors mt-3"
+            className="block bg-blue-600 text-white px-5 py-3 rounded-xl text-base font-bold text-center hover:bg-blue-700 transition-colors mt-3"
           >
             Book Now
           </a>
