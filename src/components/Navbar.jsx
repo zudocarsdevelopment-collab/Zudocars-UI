@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Menu, X, Phone, Sparkles } from 'lucide-react'
+import { Menu, X, Car, Phone, Sparkles } from 'lucide-react'
 import { cn } from '../lib/cn'
 
 const navLinks = [
@@ -39,10 +39,13 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto h-full px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-full">
           
-          {/* Logo Brand Frame (Car Icon Removed) */}
-          <a href="#home" className="flex items-center group py-2">
-            <span className="text-2xl font-black text-white tracking-tight group-hover:text-cyan-400 transition-colors duration-300">
-              Zudo<span className="text-cyan-400 font-medium group-hover:text-white transition-colors duration-300">cars</span>
+          {/* Logo Brand Frame */}
+          <a href="#home" className="flex items-center gap-3 group">
+            <div className="w-10 h-10 bg-gradient-to-b from-cyan-400 to-blue-600 rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(34,211,238,0.3)] group-hover:scale-105 transition-all duration-300">
+              <Car className="w-5 h-5 text-neutral-950" strokeWidth={2.5} />
+            </div>
+            <span className="text-xl font-black text-white tracking-tight transition-colors">
+              Zudo<span className="text-cyan-400 font-medium">cars</span>
             </span>
           </a>
 
@@ -75,7 +78,7 @@ export default function Navbar() {
               href="#booking"
               className="relative inline-flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold tracking-wide hover:opacity-95 active:scale-[0.98] transition-all shadow-[0_4px_20px_rgba(37,99,235,0.25)]"
             >
-              <Sparkles className="w-4 h-4 text-cyan-200" />
+             
               Book Now
             </a>
           </div>
