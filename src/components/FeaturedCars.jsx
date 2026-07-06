@@ -1,5 +1,8 @@
 import { Star, Users, Fuel, Settings2 } from 'lucide-react'
 
+const formatINR = (num) =>
+  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(num);
+
 const cars = [
   {
     name: 'Tesla Model 3',
@@ -157,7 +160,7 @@ export default function FeaturedCars() {
 
                 <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                   <div>
-                    <span className="text-2xl font-bold text-gray-900">${car.price}</span>
+                    <span className="text-2xl font-bold text-gray-900">{formatINR(car.price)}</span>
                     <span className="text-sm text-gray-400">/day</span>
                   </div>
                   <button className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-md shadow-blue-600/20">

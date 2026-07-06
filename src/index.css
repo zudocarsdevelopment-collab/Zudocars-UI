@@ -13,3 +13,22 @@ body {
   min-width: 320px;
   min-height: 100vh;
 }
+
+
+@keyframes hyper-drive {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-33.33%); }
+}
+
+@keyframes chassis-float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-4px) rotate(0.2deg); }
+}
+
+.animate-highway-fast {
+  animation: hyper-drive 4s linear infinite;
+}
+
+.animate-car-premium {
+  animation: chassis-float 4s ease-in-out infinite;
+}
