@@ -41,8 +41,7 @@ export default function Navbar() {
           
           {/* Logo Brand Frame */}
           <a href="#home" className="flex items-center gap-3 group">
-          
-            <span className="text-xl font-black text-white tracking-tight transition-colors">
+            <span className="text-2xl md:text-xl font-black text-white tracking-tight transition-colors">
               Zudo<span className="text-cyan-400 font-medium">cars</span>
             </span>
           </a>
