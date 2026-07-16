@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { Star, Users, Fuel, Settings2 } from 'lucide-react'
 
 const formatINR = (num) =>
@@ -104,13 +105,13 @@ export default function FeaturedCars() {
               Handpicked vehicles that combine comfort, performance, and style for an unmatched driving experience.
             </p>
           </div>
-          <a
-            href="#"
+          <Link
+            to="/cars"
             className="mt-4 sm:mt-0 text-blue-600 font-semibold text-sm hover:text-blue-700 flex items-center gap-1 transition-colors"
           >
             View All Cars
             <span className="text-lg">→</span>
-          </a>
+          </Link>
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">

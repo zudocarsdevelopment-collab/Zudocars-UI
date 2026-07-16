@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react'
-import { Menu, X, Car, Phone, Sparkles } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Menu, X, Phone } from 'lucide-react'
 import { cn } from '../lib/cn'
 
 const navLinks = [
-  { label: 'Home', href: '#home' },
-  { label: 'Fleet', href: '#fleet' },
-  { label: 'About', href: '#about' },
-  { label: 'Testimonials', href: '#testimonials' },
-  { label: 'Contact', href: '#contact' },
+  { label: 'Home', href: '/' },
+  { label: 'Cars', href: '/cars' },
+  { label: 'Fleet', href: '/#fleet' },
+  { label: 'About', href: '/#about' },
+  { label: 'Testimonials', href: '/#testimonials' },
+  { label: 'Contact', href: '/#contact' },
 ]
 
 export default function Navbar() {
@@ -23,6 +25,7 @@ export default function Navbar() {
         setScrolled(false)
       }
     }
+    handleScroll()
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
@@ -40,25 +43,30 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-full">
           
           {/* Logo Brand Frame */}
-          <a href="#home" className="flex items-center gap-3 group">
+          <Link to="/" className="flex items-center gap-3 group">
             <span className="text-2xl md:text-xl font-black text-white tracking-tight transition-colors">
               Zudo<span className="text-cyan-400 font-medium">cars</span>
             </span>
-          </a>
+          </Link>
 
           {/* Center-Aligned Interactive Link Grid */}
           <div className="hidden lg:flex items-center gap-1">
-            {navLinks.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                className="relative px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition-colors duration-300 group"
-              >
-                {link.label}
-                {/* Cyber accent line beneath links */}
-                <span className="absolute bottom-0 left-4 right-4 h-[2px] bg-cyan-400 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-center rounded-full shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
-              </a>
-            ))}
+            {navLinks.map((link) => {
+              const isRouterLink = link.href.startsWith('/')
+              const LinkComponent = isRouterLink ? Link : 'a'
+
+              return (
+                <LinkComponent
+                  key={link.label}
+                  to={isRouterLink ? link.href : undefined}
+                  href={!isRouterLink ? link.href : undefined}
+                  className={`relative px-4 py-2 text-sm transition-colors duration-300 group ${scrolled ? 'font-semibold text-white' : 'font-medium text-gray-400 hover:text-white'}`}
+                >
+                  {link.label}
+                  <span className="absolute bottom-0 left-4 right-4 h-[2px] bg-cyan-400 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-center rounded-full shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
+                </LinkComponent>
+              )
+            })}
           </div>
 
           {/* Desktop Right Actions Utility Deck */}
@@ -99,16 +107,22 @@ export default function Navbar() {
         )}
       >
         <div className="px-4 py-6 space-y-2">
-          {navLinks.map((link) => (
-            <a
-              key={link.label}
-              href={link.href}
-              onClick={() => setOpen(false)}
-              className="block text-lg font-bold text-gray-300 hover:text-cyan-400 px-3 py-3 rounded-xl hover:bg-white/[0.02] transition-all"
-            >
-              {link.label}
-            </a>
-          ))}
+          {navLinks.map((link) => {
+            const isRouterLink = link.href.startsWith('/')
+            const LinkComponent = isRouterLink ? Link : 'a'
+
+            return (
+              <LinkComponent
+                key={link.label}
+                to={isRouterLink ? link.href : undefined}
+                href={!isRouterLink ? link.href : undefined}
+                onClick={() => setOpen(false)}
+                className={`block text-lg px-3 py-3 rounded-xl transition-all ${scrolled ? 'font-semibold text-white' : 'font-bold text-gray-300 hover:text-cyan-400'}`}
+              >
+                {link.label}
+              </LinkComponent>
+            )
+          })}
           
           <div className="pt-4 border-t border-white/[0.06] space-y-4">
             <a 
@@ -119,7 +133,7 @@ export default function Navbar() {
               +1 (234) 567-890
             </a>
             <a
-              href="#booking"
+              href="/#booking"
               onClick={() => setOpen(false)}
               className="block bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-5 py-3.5 rounded-xl text-base font-bold text-center shadow-[0_4px_15px_rgba(37,99,235,0.2)]"
             >
