@@ -5,7 +5,7 @@ const contactInfo = [
   {
     icon: Phone,
     label: 'Call Us',
-    value: '+91 98765 43210',
+    value: '+91 81119 46664',
     sub: 'Mon - Sun, 8am - 10pm',
   },
   {
