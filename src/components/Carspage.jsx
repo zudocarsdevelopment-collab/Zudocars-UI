@@ -388,9 +388,9 @@ export default function CarsPage() {
   }, [selectedBrands, selectedCategories, priceRange, search, sort])
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pt-24 lg:pt-28">
       {/* Page header */}
-      <div id="cars" className="bg-white border-b border-gray-100">
+      <div id="cars" className="scroll-mt-28 bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mt-3 mb-3">Browse All Cars</h1>
           <p className="text-gray-500 max-w-xl">

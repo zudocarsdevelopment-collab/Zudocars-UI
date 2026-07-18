@@ -71,13 +71,7 @@ export default function Navbar() {
 
           {/* Desktop Right Actions Utility Deck */}
           <div className="hidden lg:flex items-center gap-6">
-            <a
-              href="tel:+1234567890"
-              className="flex items-center gap-2 text-sm font-medium text-white/80 hover:text-cyan-400 transition-colors duration-300"
-            >
-              <Phone className="w-4 h-4 text-cyan-400" />
-              +1 (234) 567-890
-            </a>
+            
 
             <a
               href="#booking"
@@ -124,13 +118,7 @@ export default function Navbar() {
           })}
 
           <div className="pt-4 border-t border-white/10 space-y-4">
-            <a
-              href="tel:+1234567890"
-              className="flex items-center gap-3 px-3 text-base text-white/80 hover:text-cyan-400 transition-colors"
-            >
-              <Phone className="w-4 h-4 text-cyan-400" />
-              +1 (234) 567-890
-            </a>
+           
             <a
               href="/#booking"
               onClick={() => setOpen(false)}
