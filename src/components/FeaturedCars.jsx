@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Star, Users, Fuel, Settings2 } from 'lucide-react'
 
-const AVAILABILITY_URL = 'http://52.90.158.246:8000/api/vehicles/'
+const AVAILABILITY_URL = 'https://52.90.158.246:8000/api/vehicles/'
 
 const formatINR = (num) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(num)
