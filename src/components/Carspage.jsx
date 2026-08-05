@@ -14,8 +14,8 @@ import {
   ShieldAlert,
 } from 'lucide-react'
 
-const API_URL = 'https://52.90.158.246:8000/api/vehicles/'
-const AVAILABLE_API_URL = 'https://52.90.158.246:8000/api/vehicles/available/'
+const API_URL = 'https://api.zudocars.com/api/vehicles/'
+const AVAILABLE_API_URL = 'https://api.zudocars.com/api/vehicles/available/'
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1494905998402-395d579af36f?w=600&h=400&fit=crop'
 
 const LOCATIONS = [
