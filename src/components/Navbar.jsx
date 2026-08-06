@@ -74,21 +74,29 @@ export default function Navbar() {
             
 
             <a
-              href="#booking"
+              href="/cars"
               className="relative inline-flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold tracking-wide hover:opacity-95 active:scale-[0.98] transition-all shadow-[0_4px_20px_rgba(37,99,235,0.35)]"
             >
               Book Now
             </a>
           </div>
 
-          {/* Custom Hamburger Trigger Toggle */}
-          <button
-            onClick={() => setOpen(!open)}
-            aria-label="Toggle menu"
-            className="lg:hidden p-2.5 rounded-xl bg-white/[0.06] border border-white/[0.1] text-white hover:bg-white/[0.12] transition-all"
-          >
-            {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
+          {/* Mobile Actions */}
+          <div className="flex items-center gap-2 lg:hidden">
+            <a
+              href="/cars"
+              className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-3 py-2 text-sm font-semibold text-white shadow-[0_4px_15px_rgba(37,99,235,0.3)]"
+            >
+              Book Now
+            </a>
+            <button
+              onClick={() => setOpen(!open)}
+              aria-label="Toggle menu"
+              className="p-2.5 rounded-xl bg-white/[0.06] border border-white/[0.1] text-white hover:bg-white/[0.12] transition-all"
+            >
+              {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -117,16 +125,7 @@ export default function Navbar() {
             )
           })}
 
-          <div className="pt-4 border-t border-white/10 space-y-4">
-           
-            <a
-              href="/#booking"
-              onClick={() => setOpen(false)}
-              className="block bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-5 py-3.5 rounded-xl text-base font-bold text-center shadow-[0_4px_15px_rgba(37,99,235,0.3)]"
-            >
-              Book Now
-            </a>
-          </div>
+          
         </div>
       </div>
     </nav>

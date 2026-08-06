@@ -12,10 +12,17 @@ import {
   Clock,
   MapPin,
   ShieldAlert,
+  ArrowLeft,
+  ArrowRight,
+  Navigation,
+  CheckCircle2,
+  Loader2,
+  AlertTriangle,
 } from 'lucide-react'
 
 const API_URL = 'https://api.zudocars.com/api/vehicles/'
 const AVAILABLE_API_URL = 'https://api.zudocars.com/api/vehicles/available/'
+const ESTIMATE_API_URL = 'https://api.zudocars.com/api/estimates/create'
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1494905998402-395d579af36f?w=600&h=400&fit=crop'
 
 const LOCATIONS = [
@@ -29,6 +36,22 @@ const LOCATIONS = [
   { id: 12, name: 'TVM Airport', type: 'pickup' },
 ]
 
+// --- Delivery / reposition pricing config -----------------------------
+// NOTE: these numbers are placeholders. Ops needs to confirm the real
+// per-km rate and which locations count as "fixed rate" zones (airport
+// runs, etc). See the DELIVERY_PRICING_README notes further down for the
+// Google Maps integration this depends on.
+const RATE_PER_KM = 15 // ₹ per km, one-way, for doorstep delivery/pickup
+const RURAL_RETURN_MULTIPLIER = 1.6 // extra weight added to the return leg
+// when the drop point has no easy transport back for the delivery agent
+// (they'd need to book a cab/auto to get back to base).
+const FIXED_RATE_LOCATIONS = {
+  // preset "delivery" destinations with a flat reposition fee instead of
+  // a distance calculation - e.g. airport runs that are always the same trip
+  'Kochi Airport': { toPickup: 450, toReturn: 450 },
+  'TVM Airport': { toPickup: 900, toReturn: 900 },
+}
+
 // Generate 24-hour time slots in 30-minute intervals
 const TIME_SLOTS = Array.from({ length: 48 }).map((_, i) => {
   const hours = Math.floor(i / 2).toString().padStart(2, '0')
@@ -36,8 +59,19 @@ const TIME_SLOTS = Array.from({ length: 48 }).map((_, i) => {
   return `${hours}:${minutes}`
 })
 
+// Quick presets so customers don't have to think in hours - "how long do
+// you need the car" is a friendlier question than picking two clocks.
+const DURATION_PRESETS = [
+  { label: '1 Day', days: 1 },
+  { label: '2 Days', days: 2 },
+  { label: '3 Days', days: 3 },
+  { label: '1 Week', days: 7 },
+]
+
 const formatINR = (num) =>
-  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(num)
+  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(
+    Math.round(num || 0)
+  )
 
 function deriveBrand(category) {
   if (!category) return 'Other'
@@ -64,6 +98,67 @@ function normalizeCar(raw) {
     year: raw.year || 2026,
     image: raw.image || raw.vehicle_image || raw.photo_url || FALLBACK_IMAGE,
   }
+}
+
+function addDaysToDate(dateStr, days) {
+  const d = new Date(dateStr + 'T00:00:00')
+  d.setDate(d.getDate() + days)
+  return d.toISOString().split('T')[0]
+}
+
+// The API needs date_from/time_from to sit at least `pre_start_cooldown_hours`
+// (currently 0.15h ≈ 9 min) in the future - anything earlier, including "now",
+// gets rejected with a 422. We pad that to 30 min and round up to the nearest
+// slot so the default the page opens with is always bookable, and so we can
+// warn the customer before they hit a submit that's guaranteed to fail.
+const MIN_LEAD_MINUTES = 30
+
+function getSafeDefaultStart() {
+  const d = new Date(Date.now() + MIN_LEAD_MINUTES * 60 * 1000)
+  const roundedMinutes = Math.ceil(d.getMinutes() / 30) * 30
+  d.setMinutes(0, 0, 0)
+  d.setMinutes(roundedMinutes)
+  const date = d.toISOString().split('T')[0]
+  const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes() % 60).padStart(2, '0')}`
+  return { date, time }
+}
+
+function isStartTimeBookable(dateStr, timeStr) {
+  const selected = new Date(`${dateStr}T${timeStr}:00`)
+  const earliestAllowed = new Date(Date.now() + MIN_LEAD_MINUTES * 60 * 1000)
+  return selected.getTime() >= earliestAllowed.getTime()
+}
+
+async function extractApiError(res, fallback) {
+  try {
+    const data = await res.json()
+    return data.error || data.msg || fallback
+  } catch {
+    return fallback
+  }
+}
+
+// ------------------------------------------------------------------
+// Distance / delivery-fee estimation.
+//
+// We don't have a live Google Maps key wired up in this environment, so
+// this function is a clearly-marked stub. Swap the body for a call to
+// your backend (recommended) which in turn calls the Google Distance
+// Matrix / Routes API - see the notes below the component for why this
+// shouldn't be called directly from the browser.
+// ------------------------------------------------------------------
+async function estimateDistanceKm(address, originLocationName) {
+  if (!address || address.trim().length < 4) {
+    throw new Error('Enter a more complete address to estimate distance.')
+  }
+  // --- STUB: replace with a real backend call, e.g. ---
+  // const res = await fetch(`${YOUR_BACKEND}/api/distance?origin=${originLocationName}&destination=${address}`)
+  // const data = await res.json()
+  // return data.distance_km
+  await new Promise((r) => setTimeout(r, 700))
+  // deterministic-ish fake distance so the demo behaves consistently for a given address
+  const seed = address.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
+  return Math.max(2, Math.round(((seed % 40) + 3) * 10) / 10)
 }
 
 function FilterSidebar({
@@ -173,7 +268,7 @@ function FilterSidebar({
   )
 }
 
-function CarCard({ car }) {
+function CarCard({ car, onBook }) {
   return (
     <div className="group bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300">
       <div className="relative overflow-hidden">
@@ -230,7 +325,10 @@ function CarCard({ car }) {
             <span className="text-2xl font-bold text-gray-900">{formatINR(car.price)}</span>
             <span className="text-sm text-gray-400"> /total</span>
           </div>
-          <button className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-md shadow-blue-600/20">
+          <button
+            onClick={() => onBook(car)}
+            className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-md shadow-blue-600/20"
+          >
             Book Now
           </button>
         </div>
@@ -239,20 +337,449 @@ function CarCard({ car }) {
   )
 }
 
-export default function CarsPage() {
-  const todayStr = new Date().toISOString().split('T')[0]
+// ============================= Booking flow =============================
+// Step 1: delivery location (self pickup at a branch, or doorstep delivery
+//         with a distance-based fee)
+// Step 2: your details
+// Step 3: terms + summary + fare breakdown + confirm
 
+function BookingModal({ car, searchParams, onClose }) {
+  const [step, setStep] = useState(1)
+
+  const [deliveryMode, setDeliveryMode] = useState('pickup') // 'pickup' | 'doorstep'
+  const [deliveryAddress, setDeliveryAddress] = useState('')
+  const [distanceKm, setDistanceKm] = useState(null)
+  const [distanceLoading, setDistanceLoading] = useState(false)
+  const [distanceError, setDistanceError] = useState(null)
+  const [ruralSurcharge, setRuralSurcharge] = useState(false)
+  const [fixedRateHit, setFixedRateHit] = useState(null)
+
+  const [customerName, setCustomerName] = useState('')
+  const [customerPhone, setCustomerPhone] = useState('')
+
+  const [agreeTerms, setAgreeTerms] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState(null)
+  const [submitSuccess, setSubmitSuccess] = useState(false)
+
+  const pickupLocationName =
+    LOCATIONS.find((l) => l.id === searchParams.pickup_location_id)?.name || 'our branch'
+
+  const ADVANCE_AMOUNT = 2000
+
+  async function handleCheckDistance() {
+    setDistanceError(null)
+    setFixedRateHit(null)
+    setDistanceLoading(true)
+    try {
+      const fixed = Object.keys(FIXED_RATE_LOCATIONS).find((name) =>
+        deliveryAddress.toLowerCase().includes(name.toLowerCase())
+      )
+      if (fixed) {
+        setFixedRateHit(fixed)
+        setDistanceKm(null)
+      } else {
+        const km = await estimateDistanceKm(deliveryAddress, pickupLocationName)
+        setDistanceKm(km)
+      }
+    } catch (err) {
+      setDistanceError(err.message || 'Could not estimate distance for that address.')
+      setDistanceKm(null)
+    } finally {
+      setDistanceLoading(false)
+    }
+  }
+
+  const repositionToPickup = useMemo(() => {
+    if (deliveryMode !== 'doorstep') return 0
+    if (fixedRateHit) return FIXED_RATE_LOCATIONS[fixedRateHit].toPickup
+    if (distanceKm == null) return 0
+    return Math.round(distanceKm * RATE_PER_KM)
+  }, [deliveryMode, fixedRateHit, distanceKm])
+
+  const repositionReturn = useMemo(() => {
+    if (deliveryMode !== 'doorstep') return 0
+    if (fixedRateHit) return FIXED_RATE_LOCATIONS[fixedRateHit].toReturn
+    if (distanceKm == null) return 0
+    const base = distanceKm * RATE_PER_KM
+    return Math.round(ruralSurcharge ? base * RURAL_RETURN_MULTIPLIER : base)
+  }, [deliveryMode, fixedRateHit, distanceKm, ruralSurcharge])
+
+  const baseFare = car.price
+  const depositAmount = car.deposit || 0
+  const totalPayable = baseFare + repositionToPickup + repositionReturn
+  const balanceDueOnPickup = Math.max(totalPayable - ADVANCE_AMOUNT, 0)
+
+  const canGoToStep2 = deliveryMode === 'pickup' || fixedRateHit || distanceKm != null
+  const canGoToStep3 = customerName.trim().length > 1 && customerPhone.trim().length >= 10
+
+  async function handleConfirm() {
+    setSubmitError(null)
+
+    if (!isStartTimeBookable(searchParams.date_from, searchParams.time_from)) {
+      setSubmitError(
+        `Your pickup time has passed while you were booking. Please go back and pick a time at least ${MIN_LEAD_MINUTES} minutes from now.`
+      )
+      return
+    }
+
+    setSubmitting(true)
+    const payload = {
+      send_whatsapp: 0,
+      customer_name: customerName.trim(),
+      customer_country_code: '91',
+      customer_phone: customerPhone.trim(),
+      estimate_priority: 'medium',
+      booking_source: '',
+      date_from: searchParams.date_from,
+      time_from: searchParams.time_from,
+      date_to: searchParams.date_to,
+      time_to: searchParams.time_to,
+      cooldown_hours: 0.15,
+      pre_start_cooldown_hours: 0.15,
+      vehicle_type: searchParams.vehicle_type,
+      pickup_location_id: searchParams.pickup_location_id,
+      dropoff_location_id: searchParams.dropoff_location_id,
+      cart_vehicle: car.id,
+      cart_services: '[]',
+      cart_km_packages: '[]',
+      selected_pricing_label: car.kmLimit ? `Basic · ${car.kmLimit} km` : 'Basic',
+      reposition_to_pickup_incl: Number(repositionToPickup) || 0,
+      reposition_return_incl: Number(repositionReturn) || 0,
+    }
+
+    try {
+      const res = await fetch(ESTIMATE_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) throw new Error(await extractApiError(res, `Booking failed (${res.status})`))
+      const data = await res.json()
+      if (data.success === false) throw new Error(data.error || 'Booking could not be created.')
+      setSubmitSuccess(true)
+    } catch (err) {
+      setSubmitError(err.message || 'Something went wrong while creating your booking.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 bg-gray-900/50" onClick={onClose} />
+      <div className="relative bg-white w-full sm:max-w-4xl sm:rounded-2xl rounded-t-2xl max-h-[92vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10">
+          <div>
+            <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">
+              Step {step} of 3
+            </p>
+            <h2 className="text-lg font-bold text-gray-900">
+              {step === 1 && 'Where should we bring the car?'}
+              {step === 2 && 'Your details'}
+              {step === 3 && 'Review & confirm'}
+            </h2>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+
+        {submitSuccess ? (
+          <div className="p-10 text-center">
+            <CheckCircle2 className="w-14 h-14 text-green-500 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Booking request sent</h3>
+            <p className="text-gray-500 mb-6">
+              We've received your request for the {car.name}. Our team will confirm your booking on WhatsApp / call
+              shortly. Pay the {formatINR(ADVANCE_AMOUNT)} advance to lock it in.
+            </p>
+            <button
+              onClick={onClose}
+              className="bg-blue-600 text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors"
+            >
+              Done
+            </button>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-[1fr_1.1fr] gap-0">
+            {/* Left: vehicle */}
+            <div className="p-6 border-b md:border-b-0 md:border-r border-gray-100">
+              <img
+                src={car.image}
+                alt={car.name}
+                onError={(e) => (e.currentTarget.src = FALLBACK_IMAGE)}
+                className="w-full h-44 object-cover rounded-xl mb-4"
+              />
+              <h3 className="text-lg font-bold text-gray-900">{car.name}</h3>
+              <p className="text-sm text-gray-400 mb-3">{car.plate}</p>
+              <div className="flex items-center gap-4 text-xs text-gray-500 mb-4">
+                <div className="flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5" /> {car.seats} Seats
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Fuel className="w-3.5 h-3.5" /> {car.fuel}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Settings2 className="w-3.5 h-3.5" /> {car.transmission}
+                </div>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-4 text-xs text-gray-500 space-y-1.5">
+                <div className="flex items-center gap-1.5 font-semibold text-gray-700">
+                  <Calendar className="w-3.5 h-3.5 text-blue-600" /> Trip
+                </div>
+                <p>
+                  {searchParams.date_from} · {searchParams.time_from} → {searchParams.date_to} ·{' '}
+                  {searchParams.time_to}
+                </p>
+                <p>Pickup branch: {pickupLocationName}</p>
+              </div>
+            </div>
+
+            {/* Right: steps */}
+            <div className="p-6">
+              {step === 1 && (
+                <div className="space-y-5">
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setDeliveryMode('pickup')}
+                      className={`text-left p-4 rounded-xl border-2 transition-colors ${
+                        deliveryMode === 'pickup'
+                          ? 'border-blue-600 bg-blue-50'
+                          : 'border-gray-200 hover:border-blue-300'
+                      }`}
+                    >
+                      <MapPin className="w-5 h-5 text-blue-600 mb-2" />
+                      <p className="text-sm font-semibold text-gray-900">Self pickup</p>
+                      <p className="text-xs text-gray-500 mt-0.5">Collect at {pickupLocationName}. No delivery fee.</p>
+                    </button>
+                    <button
+                      onClick={() => setDeliveryMode('doorstep')}
+                      className={`text-left p-4 rounded-xl border-2 transition-colors ${
+                        deliveryMode === 'doorstep'
+                          ? 'border-blue-600 bg-blue-50'
+                          : 'border-gray-200 hover:border-blue-300'
+                      }`}
+                    >
+                      <Navigation className="w-5 h-5 text-blue-600 mb-2" />
+                      <p className="text-sm font-semibold text-gray-900">Deliver to me</p>
+                      <p className="text-xs text-gray-500 mt-0.5">We bring it to your address, for a fee.</p>
+                    </button>
+                  </div>
+
+                  {deliveryMode === 'doorstep' && (
+                    <div className="space-y-3 bg-gray-50 rounded-xl p-4">
+                      <label className="text-xs font-semibold text-gray-600">Delivery address</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={deliveryAddress}
+                          onChange={(e) => {
+                            setDeliveryAddress(e.target.value)
+                            setDistanceKm(null)
+                            setFixedRateHit(null)
+                            setDistanceError(null)
+                          }}
+                          placeholder="e.g. Marine Drive, Kochi"
+                          className="flex-1 bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                        />
+                        <button
+                          onClick={handleCheckDistance}
+                          disabled={distanceLoading || !deliveryAddress.trim()}
+                          className="shrink-0 bg-gray-900 text-white px-4 py-2 rounded-lg text-xs font-semibold disabled:opacity-40 flex items-center gap-1.5"
+                        >
+                          {distanceLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Check fee'}
+                        </button>
+                      </div>
+
+                      {distanceError && (
+                        <p className="text-xs text-red-600 flex items-center gap-1">
+                          <AlertTriangle className="w-3.5 h-3.5" /> {distanceError}
+                        </p>
+                      )}
+
+                      {fixedRateHit && (
+                        <p className="text-xs text-gray-600">
+                          Fixed-rate zone ({fixedRateHit}): {formatINR(FIXED_RATE_LOCATIONS[fixedRateHit].toPickup)}{' '}
+                          delivery.
+                        </p>
+                      )}
+
+                      {distanceKm != null && !fixedRateHit && (
+                        <div className="text-xs text-gray-600 space-y-2">
+                          <p>
+                            ≈ {distanceKm} km from {pickupLocationName} · delivery fee {formatINR(repositionToPickup)}
+                          </p>
+                          <label className="flex items-start gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={ruralSurcharge}
+                              onChange={(e) => setRuralSurcharge(e.target.checked)}
+                              className="mt-0.5 w-3.5 h-3.5 rounded border-gray-300 text-blue-600"
+                            />
+                            <span>
+                              This location has no easy transport back for our delivery agent (they'll need a
+                              cab/auto to return) — add return surcharge
+                            </span>
+                          </label>
+                        </div>
+                      )}
+
+                      <p className="text-[11px] text-gray-400">
+                        Distance is estimated automatically. Our team will confirm the exact fee before your booking
+                        is finalised.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {step === 2 && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600">Full name</label>
+                    <input
+                      type="text"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="Your name"
+                      className="mt-1 w-full bg-white border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600">Phone number</label>
+                    <div className="mt-1 flex gap-2">
+                      <span className="px-3 py-2.5 bg-gray-100 rounded-lg text-sm text-gray-500 font-medium">
+                        +91
+                      </span>
+                      <input
+                        type="tel"
+                        value={customerPhone}
+                        onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, ''))}
+                        placeholder="10-digit mobile number"
+                        maxLength={10}
+                        className="flex-1 bg-white border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    We'll send booking confirmation and pickup/delivery details to this number.
+                  </p>
+                </div>
+              )}
+
+              {step === 3 && (
+                <div className="space-y-5">
+                  <div className="bg-gray-50 rounded-xl p-4 space-y-2.5 text-sm">
+                    <div className="flex justify-between text-gray-600">
+                      <span>Rental fare</span>
+                      <span className="font-medium text-gray-900">{formatINR(baseFare)}</span>
+                    </div>
+                    {deliveryMode === 'doorstep' && (
+                      <>
+                        <div className="flex justify-between text-gray-600">
+                          <span>Delivery to you</span>
+                          <span className="font-medium text-gray-900">{formatINR(repositionToPickup)}</span>
+                        </div>
+                        <div className="flex justify-between text-gray-600">
+                          <span>Return trip fee</span>
+                          <span className="font-medium text-gray-900">{formatINR(repositionReturn)}</span>
+                        </div>
+                      </>
+                    )}
+                    <div className="flex justify-between text-gray-600">
+                      <span>Refundable deposit</span>
+                      <span className="font-medium text-gray-900">{formatINR(depositAmount)}</span>
+                    </div>
+                    <div className="pt-2.5 border-t border-gray-200 flex justify-between font-bold text-gray-900">
+                      <span>Total payable</span>
+                      <span>{formatINR(totalPayable)}</span>
+                    </div>
+                    <div className="flex justify-between text-blue-700 font-semibold">
+                      <span>Advance to confirm now</span>
+                      <span>{formatINR(ADVANCE_AMOUNT)}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-400 text-xs">
+                      <span>Balance on pickup</span>
+                      <span>{formatINR(balanceDueOnPickup)}</span>
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-gray-500 bg-amber-50 border border-amber-100 rounded-xl p-3.5 space-y-1.5">
+                    <p className="font-semibold text-amber-700">Terms & conditions</p>
+                    <p>Minimum booking duration is 1 day. Returning the car late may attract additional charges — our team will confirm the exact late-return policy for your booking.</p>
+                    <p>The deposit shown above is refunded after the vehicle is returned in its original condition, subject to inspection.</p>
+                    <p>Delivery/return fees for doorstep bookings are estimates and may be revised after our team confirms the exact location.</p>
+                  </div>
+
+                  <label className="flex items-start gap-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={agreeTerms}
+                      onChange={(e) => setAgreeTerms(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 rounded border-gray-300 text-blue-600"
+                    />
+                    <span className="text-sm text-gray-600">I agree to the terms & conditions above.</span>
+                  </label>
+
+                  {submitError && (
+                    <p className="text-xs text-red-600 flex items-center gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5" /> {submitError}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Nav buttons */}
+              <div className="flex items-center justify-between mt-8 pt-5 border-t border-gray-100">
+                <button
+                  onClick={() => (step === 1 ? onClose() : setStep(step - 1))}
+                  className="flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" /> {step === 1 ? 'Cancel' : 'Back'}
+                </button>
+
+                {step < 3 && (
+                  <button
+                    onClick={() => setStep(step + 1)}
+                    disabled={step === 1 ? !canGoToStep2 : !canGoToStep3}
+                    className="flex items-center gap-1.5 bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-40 transition-colors"
+                  >
+                    Continue <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
+                {step === 3 && (
+                  <button
+                    onClick={handleConfirm}
+                    disabled={!agreeTerms || submitting}
+                    className="flex items-center gap-1.5 bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-40 transition-colors"
+                  >
+                    {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                    {submitting ? 'Booking…' : `Pay ${formatINR(ADVANCE_AMOUNT)} advance`}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export default function CarsPage() {
   const [cars, setCars] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchLoading, setSearchLoading] = useState(false)
   const [error, setError] = useState(null)
   const [isSearched, setIsSearched] = useState(false)
+  const [bookingCar, setBookingCar] = useState(null)
 
+  const safeDefaultStart = getSafeDefaultStart()
   const [searchParams, setSearchParams] = useState({
-    date_from: todayStr,
-    time_from: '00:00',
-    date_to: todayStr,
-    time_to: '02:30',
+    date_from: safeDefaultStart.date,
+    time_from: safeDefaultStart.time,
+    date_to: addDaysToDate(safeDefaultStart.date, 1),
+    time_to: safeDefaultStart.time,
     pickup_location_id: 6,
     dropoff_location_id: 6,
     vehicle_type: 'car',
@@ -303,10 +830,24 @@ export default function CarsPage() {
     }))
   }
 
+  const applyDurationPreset = (days) => {
+    setSearchParams((prev) => ({
+      ...prev,
+      date_to: addDaysToDate(prev.date_from, days),
+      time_to: prev.time_from,
+    }))
+  }
+
   const handleAvailabilitySearch = async (e) => {
     if (e) e.preventDefault()
-    setSearchLoading(true)
     setError(null)
+
+    if (!isStartTimeBookable(searchParams.date_from, searchParams.time_from)) {
+      setError(`Pickup time needs to be at least ${MIN_LEAD_MINUTES} minutes from now. Please choose a later time.`)
+      return
+    }
+
+    setSearchLoading(true)
 
     const payload = {
       date_from: searchParams.date_from,
@@ -328,7 +869,7 @@ export default function CarsPage() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to fetch available vehicles.')
+        throw new Error(await extractApiError(response, 'Failed to fetch available vehicles.'))
       }
 
       const data = await response.json()
@@ -409,131 +950,147 @@ export default function CarsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Browse All Cars</h1>
           <p className="text-gray-500 max-w-xl mb-6">
-            Search vehicle availability by choosing your pickup/dropoff locations and schedule.
+            Pick your dates, and we'll show you only the cars that are actually free for that window.
           </p>
 
-          {/* Clean, UI/UX-optimized Search Availability Form */}
           <form
             onSubmit={handleAvailabilitySearch}
-            className="bg-gray-50 border border-gray-200 rounded-2xl p-4 sm:p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 shadow-sm"
+            className="bg-gray-50 border border-gray-200 rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm"
           >
-            {/* Pickup & Dropoff Locations */}
-            <div className="flex flex-col gap-1 md:col-span-2 lg:col-span-1">
-              <label className="text-xs font-semibold text-gray-600 flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-blue-600" /> Locations
-              </label>
-              <div className="grid grid-cols-2 gap-2">
+            {/* Quick duration presets */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-gray-500 mr-1">Quick pick:</span>
+              {DURATION_PRESETS.map((p) => (
+                <button
+                  key={p.label}
+                  type="button"
+                  onClick={() => applyDurationPreset(p.days)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-300 bg-white text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors"
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              {/* Pickup & Dropoff Locations */}
+              <div className="flex flex-col gap-1 md:col-span-2 lg:col-span-1">
+                <label className="text-xs font-semibold text-gray-600 flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-blue-600" /> Locations
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <select
+                    name="pickup_location_id"
+                    value={searchParams.pickup_location_id}
+                    onChange={handleParamChange}
+                    className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
+                  >
+                    {LOCATIONS.map((loc) => (
+                      <option key={loc.id} value={loc.id}>
+                        P/U: {loc.name}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    name="dropoff_location_id"
+                    value={searchParams.dropoff_location_id}
+                    onChange={handleParamChange}
+                    className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
+                  >
+                    {LOCATIONS.map((loc) => (
+                      <option key={loc.id} value={loc.id}>
+                        D/O: {loc.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Pickup Date & Time Block */}
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-gray-600 flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5 text-blue-600" /> Start Date & Time
+                </label>
+                <div className="grid grid-cols-[1fr_90px] gap-2">
+                  <input
+                    type="date"
+                    name="date_from"
+                    value={searchParams.date_from}
+                    onChange={handleParamChange}
+                    className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all cursor-pointer"
+                  />
+                  <select
+                    name="time_from"
+                    value={searchParams.time_from}
+                    onChange={handleParamChange}
+                    className="w-full bg-white border border-gray-300 rounded-xl px-2 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all cursor-pointer"
+                  >
+                    {TIME_SLOTS.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Dropoff Date & Time Block */}
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-gray-600 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-blue-600" /> End Date & Time
+                </label>
+                <div className="grid grid-cols-[1fr_90px] gap-2">
+                  <input
+                    type="date"
+                    name="date_to"
+                    value={searchParams.date_to}
+                    onChange={handleParamChange}
+                    className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all cursor-pointer"
+                  />
+                  <select
+                    name="time_to"
+                    value={searchParams.time_to}
+                    onChange={handleParamChange}
+                    className="w-full bg-white border border-gray-300 rounded-xl px-2 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all cursor-pointer"
+                  >
+                    {TIME_SLOTS.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Vehicle Type */}
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-gray-600 flex items-center gap-1">
+                  <Settings2 className="w-3.5 h-3.5 text-blue-600" /> Type
+                </label>
                 <select
-                  name="pickup_location_id"
-                  value={searchParams.pickup_location_id}
+                  name="vehicle_type"
+                  value={searchParams.vehicle_type}
                   onChange={handleParamChange}
                   className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
                 >
-                  {LOCATIONS.map((loc) => (
-                    <option key={loc.id} value={loc.id}>
-                      P/U: {loc.name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  name="dropoff_location_id"
-                  value={searchParams.dropoff_location_id}
-                  onChange={handleParamChange}
-                  className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
-                >
-                  {LOCATIONS.map((loc) => (
-                    <option key={loc.id} value={loc.id}>
-                      D/O: {loc.name}
-                    </option>
-                  ))}
+                  <option value="car">Car</option>
+                  <option value="suv">SUV</option>
+                  <option value="sedan">Sedan</option>
+                  <option value="hatchback">Hatchback</option>
                 </select>
               </div>
-            </div>
 
-            {/* Pickup Date & Time Block */}
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-gray-600 flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-blue-600" /> Start Date & Time
-              </label>
-              <div className="grid grid-cols-[1fr_90px] gap-2">
-                <input
-                  type="date"
-                  name="date_from"
-                  value={searchParams.date_from}
-                  onChange={handleParamChange}
-                  className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all cursor-pointer"
-                />
-                <select
-                  name="time_from"
-                  value={searchParams.time_from}
-                  onChange={handleParamChange}
-                  className="w-full bg-white border border-gray-300 rounded-xl px-2 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all cursor-pointer"
+              {/* Submit Action */}
+              <div className="flex items-end">
+                <button
+                  type="submit"
+                  disabled={searchLoading}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-xl transition duration-200 flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 disabled:opacity-50 text-xs sm:text-sm h-[38px]"
                 >
-                  {TIME_SLOTS.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
+                  <Search className="w-4 h-4" />
+                  {searchLoading ? 'Searching…' : 'Show Available Cars'}
+                </button>
               </div>
-            </div>
-
-            {/* Dropoff Date & Time Block */}
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-gray-600 flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-blue-600" /> End Date & Time
-              </label>
-              <div className="grid grid-cols-[1fr_90px] gap-2">
-                <input
-                  type="date"
-                  name="date_to"
-                  value={searchParams.date_to}
-                  onChange={handleParamChange}
-                  className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all cursor-pointer"
-                />
-                <select
-                  name="time_to"
-                  value={searchParams.time_to}
-                  onChange={handleParamChange}
-                  className="w-full bg-white border border-gray-300 rounded-xl px-2 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all cursor-pointer"
-                >
-                  {TIME_SLOTS.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Vehicle Type */}
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-gray-600 flex items-center gap-1">
-                <Settings2 className="w-3.5 h-3.5 text-blue-600" /> Type
-              </label>
-              <select
-                name="vehicle_type"
-                value={searchParams.vehicle_type}
-                onChange={handleParamChange}
-                className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
-              >
-                <option value="car">Car</option>
-                <option value="suv">SUV</option>
-                <option value="sedan">Sedan</option>
-                <option value="hatchback">Hatchback</option>
-              </select>
-            </div>
-
-            {/* Submit Action */}
-            <div className="flex items-end">
-              <button
-                type="submit"
-                disabled={searchLoading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-xl transition duration-200 flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 disabled:opacity-50 text-xs sm:text-sm h-[38px]"
-              >
-                <Search className="w-4 h-4" />
-                {searchLoading ? 'Searching…' : 'Search Cars'}
-              </button>
             </div>
           </form>
         </div>
@@ -658,7 +1215,7 @@ export default function CarsPage() {
               {filteredCars.length > 0 ? (
                 <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-6">
                   {filteredCars.map((car) => (
-                    <CarCard key={car.id} car={car} />
+                    <CarCard key={car.id} car={car} onBook={setBookingCar} />
                   ))}
                 </div>
               ) : (
@@ -713,6 +1270,10 @@ export default function CarsPage() {
             </button>
           </div>
         </div>
+      )}
+
+      {bookingCar && (
+        <BookingModal car={bookingCar} searchParams={searchParams} onClose={() => setBookingCar(null)} />
       )}
     </div>
   )
