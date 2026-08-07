@@ -51,6 +51,10 @@ const FIXED_RATE_LOCATIONS = {
   'Kochi Airport': { toPickup: 450, toReturn: 450 },
   'TVM Airport': { toPickup: 900, toReturn: 900 },
 }
+// Flat service charge added on top of the distance/fixed-rate fee for every
+// doorstep booking, one leg each way.
+const DELIVERY_SURCHARGE = 500
+const RETURN_SURCHARGE = 500
 
 // Generate 24-hour time slots in 30-minute intervals
 const TIME_SLOTS = Array.from({ length: 48 }).map((_, i) => {
@@ -136,6 +140,37 @@ async function extractApiError(res, fallback) {
   } catch {
     return fallback
   }
+}
+
+// Ops WhatsApp number that should get pinged with every new booking enquiry.
+const BOOKING_ENQUIRY_WHATSAPP_NUMBER = '918589900964'
+
+function locationName(id) {
+  return LOCATIONS.find((l) => l.id === id)?.name || `Location #${id}`
+}
+
+function buildBookingEnquiryMessage({ car, searchParams, customerName, customerPhone, deliveryMode, deliveryAddress, estimate }) {
+  const lines = [
+    '🚗 New booking enquiry',
+    '',
+    `Vehicle: ${car.name} (${car.plate})`,
+    `Trip: ${searchParams.date_from} ${searchParams.time_from} → ${searchParams.date_to} ${searchParams.time_to}`,
+    `Pickup location: ${locationName(searchParams.pickup_location_id)}`,
+    `Dropoff location: ${locationName(searchParams.dropoff_location_id)}`,
+  ]
+  if (deliveryMode === 'doorstep' && deliveryAddress) {
+    lines.push(`Doorstep delivery to: ${deliveryAddress}`)
+  }
+  lines.push('', `Customer: ${customerName}`, `Phone: +91 ${customerPhone}`)
+  if (estimate?.estimate_id) {
+    lines.push('', `Estimate ID: ${estimate.estimate_id}`)
+    if (estimate.public_url) lines.push(`View estimate: ${estimate.public_url}`)
+  }
+  return lines.join('\n')
+}
+
+function buildWhatsappLink(message) {
+  return `https://wa.me/${BOOKING_ENQUIRY_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`
 }
 
 // ------------------------------------------------------------------
@@ -361,6 +396,7 @@ function BookingModal({ car, searchParams, onClose }) {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [enquiryWhatsappLink, setEnquiryWhatsappLink] = useState(null)
 
   const pickupLocationName =
     LOCATIONS.find((l) => l.id === searchParams.pickup_location_id)?.name || 'our branch'
@@ -392,17 +428,17 @@ function BookingModal({ car, searchParams, onClose }) {
 
   const repositionToPickup = useMemo(() => {
     if (deliveryMode !== 'doorstep') return 0
-    if (fixedRateHit) return FIXED_RATE_LOCATIONS[fixedRateHit].toPickup
+    if (fixedRateHit) return FIXED_RATE_LOCATIONS[fixedRateHit].toPickup + DELIVERY_SURCHARGE
     if (distanceKm == null) return 0
-    return Math.round(distanceKm * RATE_PER_KM)
+    return Math.round(distanceKm * RATE_PER_KM) + DELIVERY_SURCHARGE
   }, [deliveryMode, fixedRateHit, distanceKm])
 
   const repositionReturn = useMemo(() => {
     if (deliveryMode !== 'doorstep') return 0
-    if (fixedRateHit) return FIXED_RATE_LOCATIONS[fixedRateHit].toReturn
+    if (fixedRateHit) return FIXED_RATE_LOCATIONS[fixedRateHit].toReturn + RETURN_SURCHARGE
     if (distanceKm == null) return 0
     const base = distanceKm * RATE_PER_KM
-    return Math.round(ruralSurcharge ? base * RURAL_RETURN_MULTIPLIER : base)
+    return Math.round(ruralSurcharge ? base * RURAL_RETURN_MULTIPLIER : base) + RETURN_SURCHARGE
   }, [deliveryMode, fixedRateHit, distanceKm, ruralSurcharge])
 
   const baseFare = car.price
@@ -457,6 +493,23 @@ function BookingModal({ car, searchParams, onClose }) {
       if (!res.ok) throw new Error(await extractApiError(res, `Booking failed (${res.status})`))
       const data = await res.json()
       if (data.success === false) throw new Error(data.error || 'Booking could not be created.')
+
+      const message = buildBookingEnquiryMessage({
+        car,
+        searchParams,
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.trim(),
+        deliveryMode,
+        deliveryAddress,
+        estimate: data,
+      })
+      const waLink = buildWhatsappLink(message)
+      setEnquiryWhatsappLink(waLink)
+      // Best-effort auto-open so the ops team is notified immediately; if the
+      // browser blocks the popup (common on some mobile browsers), the
+      // "Notify our team" button on the confirmation screen is the fallback.
+      window.open(waLink, '_blank', 'noopener,noreferrer')
+
       setSubmitSuccess(true)
     } catch (err) {
       setSubmitError(err.message || 'Something went wrong while creating your booking.')
@@ -493,6 +546,17 @@ function BookingModal({ car, searchParams, onClose }) {
               We've received your request for the {car.name}. Our team will confirm your booking on WhatsApp / call
               shortly. Pay the {formatINR(ADVANCE_AMOUNT)} advance to lock it in.
             </p>
+            {enquiryWhatsappLink && (
+              <a
+                href={enquiryWhatsappLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 bg-green-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-green-700 transition-colors mb-3"
+              >
+                Notify our team on WhatsApp
+              </a>
+            )}
+            <br />
             <button
               onClick={onClose}
               className="bg-blue-600 text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors"
@@ -607,7 +671,8 @@ function BookingModal({ car, searchParams, onClose }) {
                       {distanceKm != null && !fixedRateHit && (
                         <div className="text-xs text-gray-600 space-y-2">
                           <p>
-                            ≈ {distanceKm} km from {pickupLocationName} · delivery fee {formatINR(repositionToPickup)}
+                            ≈ {distanceKm} km from {pickupLocationName} · delivery fee {formatINR(repositionToPickup)}{' '}
+                            (incl. {formatINR(DELIVERY_SURCHARGE)} service charge)
                           </p>
                           <label className="flex items-start gap-2 cursor-pointer">
                             <input
@@ -683,6 +748,9 @@ function BookingModal({ car, searchParams, onClose }) {
                         <div className="flex justify-between text-gray-600">
                           <span>Return trip fee</span>
                           <span className="font-medium text-gray-900">{formatINR(repositionReturn)}</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-gray-400 -mt-1">
+                          <span>(includes {formatINR(DELIVERY_SURCHARGE)} + {formatINR(RETURN_SURCHARGE)} service charge)</span>
                         </div>
                       </>
                     )}

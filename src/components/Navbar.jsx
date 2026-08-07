@@ -73,22 +73,23 @@ export default function Navbar() {
           <div className="hidden lg:flex items-center gap-6">
             
 
-            <a
-              href="/cars"
+            <Link
+              to="/cars"
               className="relative inline-flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold tracking-wide hover:opacity-95 active:scale-[0.98] transition-all shadow-[0_4px_20px_rgba(37,99,235,0.35)]"
             >
               Book Now
-            </a>
+            </Link>
           </div>
 
           {/* Mobile Actions */}
           <div className="flex items-center gap-2 lg:hidden">
-            <a
-              href="/cars"
+            <Link
+              to="/cars"
               className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-3 py-2 text-sm font-semibold text-white shadow-[0_4px_15px_rgba(37,99,235,0.3)]"
+              onClick={() => setOpen(false)}
             >
               Book Now
-            </a>
+            </Link>
             <button
               onClick={() => setOpen(!open)}
               aria-label="Toggle menu"
