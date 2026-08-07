@@ -286,7 +286,7 @@ export default function Hero() {
               className="grid grid-cols-3 gap-8 pt-8 border-t border-white/[0.06] max-w-sm"
             >
               <div>
-                <p className="text-3xl font-light text-white tracking-tight">500<span className="text-blue-500 font-normal">+</span></p>
+                <p className="text-3xl font-light text-white tracking-tight">100<span className="text-blue-500 font-normal">+</span></p>
                 <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Cars In Fleet</p>
               </div>
               <div>
