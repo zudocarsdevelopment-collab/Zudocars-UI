@@ -14,7 +14,6 @@ import {
   ShieldAlert,
   ArrowLeft,
   ArrowRight,
-  Navigation,
   CheckCircle2,
   Loader2,
   AlertTriangle,
@@ -22,8 +21,17 @@ import {
 
 const API_URL = 'https://api.zudocars.com/api/vehicles/'
 const AVAILABLE_API_URL = 'https://api.zudocars.com/api/vehicles/available/'
-const ESTIMATE_API_URL = 'https://api.zudocars.com/api/estimates/create'
+const ESTIMATE_API_URL = 'https://api.zudocars.com/api/estimates/create/'
+const PDF_API_URL = 'https://api.zudocars.com/api/estimates/pdf/'
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1494905998402-395d579af36f?w=600&h=400&fit=crop'
+
+// TODO: these should come from whichever staff member/branch is actually
+// handling the booking rather than being hardcoded. Wiring that up needs a
+// source of truth for staff-on-duty (a login, a roster, etc.) that this
+// frontend doesn't have access to yet - swap these out once that exists.
+const STAFF_NAME = 'Ani'
+const STAFF_PHONE = '+91 9387005555'
+const STAFF_PHONE_DISPLAY = '93870 05555'
 
 const LOCATIONS = [
   { id: 6, name: 'Edapally Lulu', type: 'pickup' },
@@ -37,24 +45,8 @@ const LOCATIONS = [
 ]
 
 // --- Delivery / reposition pricing config -----------------------------
-// NOTE: these numbers are placeholders. Ops needs to confirm the real
-// per-km rate and which locations count as "fixed rate" zones (airport
-// runs, etc). See the DELIVERY_PRICING_README notes further down for the
-// Google Maps integration this depends on.
-const RATE_PER_KM = 15 // ₹ per km, one-way, for doorstep delivery/pickup
-const RURAL_RETURN_MULTIPLIER = 1.6 // extra weight added to the return leg
-// when the drop point has no easy transport back for the delivery agent
-// (they'd need to book a cab/auto to get back to base).
-const FIXED_RATE_LOCATIONS = {
-  // preset "delivery" destinations with a flat reposition fee instead of
-  // a distance calculation - e.g. airport runs that are always the same trip
-  'Kochi Airport': { toPickup: 450, toReturn: 450 },
-  'TVM Airport': { toPickup: 900, toReturn: 900 },
-}
-// Flat service charge added on top of the distance/fixed-rate fee for every
-// doorstep booking, one leg each way.
-const DELIVERY_SURCHARGE = 500
-const RETURN_SURCHARGE = 500
+// Doorstep delivery is currently disabled - self pickup only. Left here so
+// it's a one-line flip (see BookingModal) if doorstep delivery comes back.
 
 // Generate 24-hour time slots in 30-minute intervals
 const TIME_SLOTS = Array.from({ length: 48 }).map((_, i) => {
@@ -95,6 +87,10 @@ function normalizeCar(raw) {
     seats: raw.seats || 5,
     fuel: raw.fuel_type || '—',
     kmLimit: raw.km_limit,
+    // Rate charged per km once the included km allowance is exceeded. Field
+    // name isn't confirmed from the vehicles API - falls back to 0 (shown as
+    // "0" on the PDF) until the real field name is confirmed with backend.
+    extraKmCharge: Number(raw.extra_km_charge ?? raw.extra_km_rate ?? raw.km_extra_charge ?? 0) || 0,
     availableStock: raw.available_stock,
     transmission: raw.transmission
       ? raw.transmission.charAt(0) + raw.transmission.slice(1).toLowerCase()
@@ -149,7 +145,7 @@ function locationName(id) {
   return LOCATIONS.find((l) => l.id === id)?.name || `Location #${id}`
 }
 
-function buildBookingEnquiryMessage({ car, searchParams, customerName, customerPhone, deliveryMode, deliveryAddress, estimate }) {
+function buildBookingEnquiryMessage({ car, searchParams, customerName, customerPhone, estimate, pdfUrl }) {
   const lines = [
     '🚗 New booking enquiry',
     '',
@@ -157,15 +153,17 @@ function buildBookingEnquiryMessage({ car, searchParams, customerName, customerP
     `Trip: ${searchParams.date_from} ${searchParams.time_from} → ${searchParams.date_to} ${searchParams.time_to}`,
     `Pickup location: ${locationName(searchParams.pickup_location_id)}`,
     `Dropoff location: ${locationName(searchParams.dropoff_location_id)}`,
+    '',
+    `Customer: ${customerName}`,
+    `Phone: +91 ${customerPhone}`,
   ]
-  if (deliveryMode === 'doorstep' && deliveryAddress) {
-    lines.push(`Doorstep delivery to: ${deliveryAddress}`)
-  }
-  lines.push('', `Customer: ${customerName}`, `Phone: +91 ${customerPhone}`)
   if (estimate?.estimate_id) {
     lines.push('', `Estimate ID: ${estimate.estimate_id}`)
-    if (estimate.public_url) lines.push(`View estimate: ${estimate.public_url}`)
   }
+  // Prefer the Zudo-branded PDF; fall back to the raw therentos link if PDF
+  // generation failed or hasn't come back yet.
+  const linkToShow = pdfUrl || estimate?.public_url
+  if (linkToShow) lines.push(`Estimate PDF: ${linkToShow}`)
   return lines.join('\n')
 }
 
@@ -173,28 +171,46 @@ function buildWhatsappLink(message) {
   return `https://wa.me/${BOOKING_ENQUIRY_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`
 }
 
-// ------------------------------------------------------------------
-// Distance / delivery-fee estimation.
-//
-// We don't have a live Google Maps key wired up in this environment, so
-// this function is a clearly-marked stub. Swap the body for a call to
-// your backend (recommended) which in turn calls the Google Distance
-// Matrix / Routes API - see the notes below the component for why this
-// shouldn't be called directly from the browser.
-// ------------------------------------------------------------------
-async function estimateDistanceKm(address, originLocationName) {
-  if (!address || address.trim().length < 4) {
-    throw new Error('Enter a more complete address to estimate distance.')
+// Generates the Zudo-branded PDF for a just-created estimate. Best-effort:
+// if this fails, the booking itself already succeeded, so callers should
+// fall back to the raw therentos public_url instead of blocking on this.
+async function generateEstimatePdf({ car, searchParams, customerName, customerPhone, estimateResponse }) {
+  const payload = {
+    customer_name: customerName,
+    customer_phone: customerPhone,
+    customer_country_code: '91',
+    vehicle_name: car.name,
+    transmission: car.transmission,
+    fuel_type: car.fuel,
+    pickup_location_name: locationName(searchParams.pickup_location_id),
+    dropoff_location_name: locationName(searchParams.dropoff_location_id),
+    date_from: searchParams.date_from,
+    time_from: searchParams.time_from,
+    date_to: searchParams.date_to,
+    time_to: searchParams.time_to,
+    extra_km_charge: car.extraKmCharge || 0,
+    staff_name: STAFF_NAME,
+    staff_phone: STAFF_PHONE,
+    staff_phone_display: STAFF_PHONE_DISPLAY,
+    therentos_response: estimateResponse,
   }
-  // --- STUB: replace with a real backend call, e.g. ---
-  // const res = await fetch(`${YOUR_BACKEND}/api/distance?origin=${originLocationName}&destination=${address}`)
-  // const data = await res.json()
-  // return data.distance_km
-  await new Promise((r) => setTimeout(r, 700))
-  // deterministic-ish fake distance so the demo behaves consistently for a given address
-  const seed = address.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
-  return Math.max(2, Math.round(((seed % 40) + 3) * 10) / 10)
+
+  const res = await fetch(PDF_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) throw new Error(await extractApiError(res, `PDF generation failed (${res.status})`))
+  const data = await res.json()
+  if (data.success === false || !data.pdf_url) throw new Error(data.error || 'PDF generation did not return a URL.')
+  return data.pdf_url
 }
+
+// ------------------------------------------------------------------
+// Doorstep delivery / distance-based fees are disabled for now - self
+// pickup only. The estimateDistanceKm stub and related pricing logic were
+// removed; see git history if doorstep delivery needs to come back.
+// ------------------------------------------------------------------
 
 function FilterSidebar({
   brands,
@@ -373,21 +389,11 @@ function CarCard({ car, onBook }) {
 }
 
 // ============================= Booking flow =============================
-// Step 1: delivery location (self pickup at a branch, or doorstep delivery
-//         with a distance-based fee)
-// Step 2: your details
-// Step 3: terms + summary + fare breakdown + confirm
+// Step 1: your details
+// Step 2: terms + fare summary + confirm (self pickup only, no delivery fees)
 
 function BookingModal({ car, searchParams, onClose }) {
-  const [step, setStep] = useState(1)
-
-  const [deliveryMode, setDeliveryMode] = useState('pickup') // 'pickup' | 'doorstep'
-  const [deliveryAddress, setDeliveryAddress] = useState('')
-  const [distanceKm, setDistanceKm] = useState(null)
-  const [distanceLoading, setDistanceLoading] = useState(false)
-  const [distanceError, setDistanceError] = useState(null)
-  const [ruralSurcharge, setRuralSurcharge] = useState(false)
-  const [fixedRateHit, setFixedRateHit] = useState(null)
+  const [step, setStep] = useState(1) // 1: your details, 2: review & confirm
 
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
@@ -397,57 +403,21 @@ function BookingModal({ car, searchParams, onClose }) {
   const [submitError, setSubmitError] = useState(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
   const [enquiryWhatsappLink, setEnquiryWhatsappLink] = useState(null)
+  const [estimateResult, setEstimateResult] = useState(null)
+  const [pdfUrl, setPdfUrl] = useState(null)
 
-  const pickupLocationName =
-    LOCATIONS.find((l) => l.id === searchParams.pickup_location_id)?.name || 'our branch'
+  const pickupLocationName = locationName(searchParams.pickup_location_id)
 
   const ADVANCE_AMOUNT = 2000
-
-  async function handleCheckDistance() {
-    setDistanceError(null)
-    setFixedRateHit(null)
-    setDistanceLoading(true)
-    try {
-      const fixed = Object.keys(FIXED_RATE_LOCATIONS).find((name) =>
-        deliveryAddress.toLowerCase().includes(name.toLowerCase())
-      )
-      if (fixed) {
-        setFixedRateHit(fixed)
-        setDistanceKm(null)
-      } else {
-        const km = await estimateDistanceKm(deliveryAddress, pickupLocationName)
-        setDistanceKm(km)
-      }
-    } catch (err) {
-      setDistanceError(err.message || 'Could not estimate distance for that address.')
-      setDistanceKm(null)
-    } finally {
-      setDistanceLoading(false)
-    }
-  }
-
-  const repositionToPickup = useMemo(() => {
-    if (deliveryMode !== 'doorstep') return 0
-    if (fixedRateHit) return FIXED_RATE_LOCATIONS[fixedRateHit].toPickup + DELIVERY_SURCHARGE
-    if (distanceKm == null) return 0
-    return Math.round(distanceKm * RATE_PER_KM) + DELIVERY_SURCHARGE
-  }, [deliveryMode, fixedRateHit, distanceKm])
-
-  const repositionReturn = useMemo(() => {
-    if (deliveryMode !== 'doorstep') return 0
-    if (fixedRateHit) return FIXED_RATE_LOCATIONS[fixedRateHit].toReturn + RETURN_SURCHARGE
-    if (distanceKm == null) return 0
-    const base = distanceKm * RATE_PER_KM
-    return Math.round(ruralSurcharge ? base * RURAL_RETURN_MULTIPLIER : base) + RETURN_SURCHARGE
-  }, [deliveryMode, fixedRateHit, distanceKm, ruralSurcharge])
+  const BASE_TO_DELIVERY_FEE = 500
+  const RETURN_TO_BASE_FEE = 500
 
   const baseFare = car.price
   const depositAmount = car.deposit || 0
-  const totalPayable = baseFare + repositionToPickup + repositionReturn
+  const totalPayable = baseFare + BASE_TO_DELIVERY_FEE + RETURN_TO_BASE_FEE
   const balanceDueOnPickup = Math.max(totalPayable - ADVANCE_AMOUNT, 0)
 
-  const canGoToStep2 = deliveryMode === 'pickup' || fixedRateHit || distanceKm != null
-  const canGoToStep3 = customerName.trim().length > 1 && customerPhone.trim().length >= 10
+  const canGoToStep2 = customerName.trim().length > 1 && customerPhone.trim().length >= 10
 
   async function handleConfirm() {
     setSubmitError(null)
@@ -480,8 +450,13 @@ function BookingModal({ car, searchParams, onClose }) {
       cart_services: '[]',
       cart_km_packages: '[]',
       selected_pricing_label: car.kmLimit ? `Basic · ${car.kmLimit} km` : 'Basic',
-      reposition_to_pickup_incl: Number(repositionToPickup) || 0,
-      reposition_return_incl: Number(repositionReturn) || 0,
+      // "Base to delivery" / "Return to base" - fixed at ₹500 each for
+      // every booking. (These also happen to sidestep the backend's
+      // ZeroDivisionError that fires when this is sent as exactly 0 - see
+      // earlier notes - but the ₹500 amount itself is the actual pricing
+      // decision, not just a crash workaround.)
+      reposition_to_pickup_incl: 500,
+      reposition_return_incl: 500,
     }
 
     try {
@@ -494,17 +469,34 @@ function BookingModal({ car, searchParams, onClose }) {
       const data = await res.json()
       if (data.success === false) throw new Error(data.error || 'Booking could not be created.')
 
+      // Generate our own branded PDF. Best-effort: the booking already
+      // succeeded, so a PDF failure shouldn't block the confirmation - we
+      // just fall back to the therentos link in that case.
+      let generatedPdfUrl = null
+      try {
+        generatedPdfUrl = await generateEstimatePdf({
+          car,
+          searchParams,
+          customerName: customerName.trim(),
+          customerPhone: customerPhone.trim(),
+          estimateResponse: data,
+        })
+        setPdfUrl(generatedPdfUrl)
+      } catch (pdfErr) {
+        console.error('PDF generation failed, falling back to therentos link:', pdfErr)
+      }
+
       const message = buildBookingEnquiryMessage({
         car,
         searchParams,
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
-        deliveryMode,
-        deliveryAddress,
         estimate: data,
+        pdfUrl: generatedPdfUrl,
       })
       const waLink = buildWhatsappLink(message)
       setEnquiryWhatsappLink(waLink)
+      setEstimateResult(data)
       // Best-effort auto-open so the ops team is notified immediately; if the
       // browser blocks the popup (common on some mobile browsers), the
       // "Notify our team" button on the confirmation screen is the fallback.
@@ -525,12 +517,11 @@ function BookingModal({ car, searchParams, onClose }) {
         <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10">
           <div>
             <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">
-              Step {step} of 3
+              Step {step} of 2
             </p>
             <h2 className="text-lg font-bold text-gray-900">
-              {step === 1 && 'Where should we bring the car?'}
-              {step === 2 && 'Your details'}
-              {step === 3 && 'Review & confirm'}
+              {step === 1 && 'Your details'}
+              {step === 2 && 'Review & confirm'}
             </h2>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -563,6 +554,31 @@ function BookingModal({ car, searchParams, onClose }) {
             >
               Done
             </button>
+            {estimateResult && (
+              <div className="flex items-center justify-center gap-4 mt-5 text-xs">
+                {pdfUrl ? (
+                  <a
+                    href={pdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    Download PDF
+                  </a>
+                ) : (
+                  estimateResult.public_url && (
+                    <a
+                      href={estimateResult.public_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      View estimate
+                    </a>
+                  )
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <div className="grid md:grid-cols-[1fr_1.1fr] gap-0">
@@ -596,109 +612,13 @@ function BookingModal({ car, searchParams, onClose }) {
                   {searchParams.time_to}
                 </p>
                 <p>Pickup branch: {pickupLocationName}</p>
+                <p className="pt-1 text-gray-400">Self pickup only — collect at this branch, no delivery fee.</p>
               </div>
             </div>
 
             {/* Right: steps */}
             <div className="p-6">
               {step === 1 && (
-                <div className="space-y-5">
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      onClick={() => setDeliveryMode('pickup')}
-                      className={`text-left p-4 rounded-xl border-2 transition-colors ${
-                        deliveryMode === 'pickup'
-                          ? 'border-blue-600 bg-blue-50'
-                          : 'border-gray-200 hover:border-blue-300'
-                      }`}
-                    >
-                      <MapPin className="w-5 h-5 text-blue-600 mb-2" />
-                      <p className="text-sm font-semibold text-gray-900">Self pickup</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Collect at {pickupLocationName}. No delivery fee.</p>
-                    </button>
-                    <button
-                      onClick={() => setDeliveryMode('doorstep')}
-                      className={`text-left p-4 rounded-xl border-2 transition-colors ${
-                        deliveryMode === 'doorstep'
-                          ? 'border-blue-600 bg-blue-50'
-                          : 'border-gray-200 hover:border-blue-300'
-                      }`}
-                    >
-                      <Navigation className="w-5 h-5 text-blue-600 mb-2" />
-                      <p className="text-sm font-semibold text-gray-900">Deliver to me</p>
-                      <p className="text-xs text-gray-500 mt-0.5">We bring it to your address, for a fee.</p>
-                    </button>
-                  </div>
-
-                  {deliveryMode === 'doorstep' && (
-                    <div className="space-y-3 bg-gray-50 rounded-xl p-4">
-                      <label className="text-xs font-semibold text-gray-600">Delivery address</label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={deliveryAddress}
-                          onChange={(e) => {
-                            setDeliveryAddress(e.target.value)
-                            setDistanceKm(null)
-                            setFixedRateHit(null)
-                            setDistanceError(null)
-                          }}
-                          placeholder="e.g. Marine Drive, Kochi"
-                          className="flex-1 bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
-                        />
-                        <button
-                          onClick={handleCheckDistance}
-                          disabled={distanceLoading || !deliveryAddress.trim()}
-                          className="shrink-0 bg-gray-900 text-white px-4 py-2 rounded-lg text-xs font-semibold disabled:opacity-40 flex items-center gap-1.5"
-                        >
-                          {distanceLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Check fee'}
-                        </button>
-                      </div>
-
-                      {distanceError && (
-                        <p className="text-xs text-red-600 flex items-center gap-1">
-                          <AlertTriangle className="w-3.5 h-3.5" /> {distanceError}
-                        </p>
-                      )}
-
-                      {fixedRateHit && (
-                        <p className="text-xs text-gray-600">
-                          Fixed-rate zone ({fixedRateHit}): {formatINR(FIXED_RATE_LOCATIONS[fixedRateHit].toPickup)}{' '}
-                          delivery.
-                        </p>
-                      )}
-
-                      {distanceKm != null && !fixedRateHit && (
-                        <div className="text-xs text-gray-600 space-y-2">
-                          <p>
-                            ≈ {distanceKm} km from {pickupLocationName} · delivery fee {formatINR(repositionToPickup)}{' '}
-                            (incl. {formatINR(DELIVERY_SURCHARGE)} service charge)
-                          </p>
-                          <label className="flex items-start gap-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={ruralSurcharge}
-                              onChange={(e) => setRuralSurcharge(e.target.checked)}
-                              className="mt-0.5 w-3.5 h-3.5 rounded border-gray-300 text-blue-600"
-                            />
-                            <span>
-                              This location has no easy transport back for our delivery agent (they'll need a
-                              cab/auto to return) — add return surcharge
-                            </span>
-                          </label>
-                        </div>
-                      )}
-
-                      <p className="text-[11px] text-gray-400">
-                        Distance is estimated automatically. Our team will confirm the exact fee before your booking
-                        is finalised.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {step === 2 && (
                 <div className="space-y-4">
                   <div>
                     <label className="text-xs font-semibold text-gray-600">Full name</label>
@@ -732,28 +652,21 @@ function BookingModal({ car, searchParams, onClose }) {
                 </div>
               )}
 
-              {step === 3 && (
+              {step === 2 && (
                 <div className="space-y-5">
                   <div className="bg-gray-50 rounded-xl p-4 space-y-2.5 text-sm">
                     <div className="flex justify-between text-gray-600">
                       <span>Rental fare</span>
                       <span className="font-medium text-gray-900">{formatINR(baseFare)}</span>
                     </div>
-                    {deliveryMode === 'doorstep' && (
-                      <>
-                        <div className="flex justify-between text-gray-600">
-                          <span>Delivery to you</span>
-                          <span className="font-medium text-gray-900">{formatINR(repositionToPickup)}</span>
-                        </div>
-                        <div className="flex justify-between text-gray-600">
-                          <span>Return trip fee</span>
-                          <span className="font-medium text-gray-900">{formatINR(repositionReturn)}</span>
-                        </div>
-                        <div className="flex justify-between text-xs text-gray-400 -mt-1">
-                          <span>(includes {formatINR(DELIVERY_SURCHARGE)} + {formatINR(RETURN_SURCHARGE)} service charge)</span>
-                        </div>
-                      </>
-                    )}
+                    <div className="flex justify-between text-gray-600">
+                      <span>Base to delivery</span>
+                      <span className="font-medium text-gray-900">{formatINR(BASE_TO_DELIVERY_FEE)}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-600">
+                      <span>Return to base</span>
+                      <span className="font-medium text-gray-900">{formatINR(RETURN_TO_BASE_FEE)}</span>
+                    </div>
                     <div className="flex justify-between text-gray-600">
                       <span>Refundable deposit</span>
                       <span className="font-medium text-gray-900">{formatINR(depositAmount)}</span>
@@ -776,7 +689,6 @@ function BookingModal({ car, searchParams, onClose }) {
                     <p className="font-semibold text-amber-700">Terms & conditions</p>
                     <p>Minimum booking duration is 1 day. Returning the car late may attract additional charges — our team will confirm the exact late-return policy for your booking.</p>
                     <p>The deposit shown above is refunded after the vehicle is returned in its original condition, subject to inspection.</p>
-                    <p>Delivery/return fees for doorstep bookings are estimates and may be revised after our team confirms the exact location.</p>
                   </div>
 
                   <label className="flex items-start gap-2.5 cursor-pointer">
@@ -806,16 +718,16 @@ function BookingModal({ car, searchParams, onClose }) {
                   <ArrowLeft className="w-4 h-4" /> {step === 1 ? 'Cancel' : 'Back'}
                 </button>
 
-                {step < 3 && (
+                {step < 2 && (
                   <button
                     onClick={() => setStep(step + 1)}
-                    disabled={step === 1 ? !canGoToStep2 : !canGoToStep3}
+                    disabled={!canGoToStep2}
                     className="flex items-center gap-1.5 bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-40 transition-colors"
                   >
                     Continue <ArrowRight className="w-4 h-4" />
                   </button>
                 )}
-                {step === 3 && (
+                {step === 2 && (
                   <button
                     onClick={handleConfirm}
                     disabled={!agreeTerms || submitting}
@@ -1142,9 +1054,7 @@ export default function CarsPage() {
                   className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
                 >
                   <option value="car">Car</option>
-                  <option value="suv">SUV</option>
-                  <option value="sedan">Sedan</option>
-                  <option value="hatchback">Hatchback</option>
+                  
                 </select>
               </div>
 
