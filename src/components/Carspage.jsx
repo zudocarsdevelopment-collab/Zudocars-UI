@@ -173,7 +173,7 @@ function buildWhatsappLink(message) {
 
 // Generates the Zudo-branded PDF for a just-created estimate. Best-effort:
 // if this fails, the booking itself already succeeded, so callers should
-// fall back to the raw therentos public_url instead of blocking on this.
+// fall back to the raw therentos link instead of blocking on this.
 async function generateEstimatePdf({ car, searchParams, customerName, customerPhone, estimateResponse }) {
   const payload = {
     customer_name: customerName,
@@ -409,8 +409,8 @@ function BookingModal({ car, searchParams, onClose }) {
   const pickupLocationName = locationName(searchParams.pickup_location_id)
 
   const ADVANCE_AMOUNT = 2000
-  const BASE_TO_DELIVERY_FEE = 500
-  const RETURN_TO_BASE_FEE = 500
+  const BASE_TO_DELIVERY_FEE = 600
+  const RETURN_TO_BASE_FEE = 600
 
   const baseFare = car.price
   const depositAmount = car.deposit || 0
@@ -455,8 +455,8 @@ function BookingModal({ car, searchParams, onClose }) {
       // ZeroDivisionError that fires when this is sent as exactly 0 - see
       // earlier notes - but the ₹500 amount itself is the actual pricing
       // decision, not just a crash workaround.)
-      reposition_to_pickup_incl: 500,
-      reposition_return_incl: 500,
+      reposition_to_pickup_incl: 600,
+      reposition_return_incl: 600,
     }
 
     try {
@@ -734,7 +734,7 @@ function BookingModal({ car, searchParams, onClose }) {
                     className="flex items-center gap-1.5 bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-40 transition-colors"
                   >
                     {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                    {submitting ? 'Booking…' : `Pay ${formatINR(ADVANCE_AMOUNT)} advance`}
+                    {submitting ? 'Booking…' : 'Book Now'}
                   </button>
                 )}
               </div>
@@ -764,6 +764,11 @@ export default function CarsPage() {
     dropoff_location_id: 6,
     vehicle_type: 'car',
   })
+
+  // When true, the end time always mirrors the start time and the end-time
+  // select is locked. Defaults on since most bookings are "same time, N days
+  // later" - the user can uncheck it to pick an independent end time.
+  const [syncEndTime, setSyncEndTime] = useState(true)
 
   const [selectedBrands, setSelectedBrands] = useState([])
   const [selectedCategories, setSelectedCategories] = useState([])
@@ -804,17 +809,34 @@ export default function CarsPage() {
 
   const handleParamChange = (e) => {
     const { name, value } = e.target
-    setSearchParams((prev) => ({
-      ...prev,
-      [name]: name.includes('location_id') ? Number(value) : value,
-    }))
+    setSearchParams((prev) => {
+      const next = {
+        ...prev,
+        [name]: name.includes('location_id') ? Number(value) : value,
+      }
+      // Keep end time glued to start time whenever sync is on, so typing a
+      // new start time (not just clicking a duration preset) also updates it.
+      if (name === 'time_from' && syncEndTime) {
+        next.time_to = value
+      }
+      return next
+    })
+  }
+
+  // Toggling sync back on immediately snaps end time to match start time;
+  // toggling it off just unlocks the end-time select without changing it.
+  const handleSyncEndTimeToggle = (checked) => {
+    setSyncEndTime(checked)
+    if (checked) {
+      setSearchParams((prev) => ({ ...prev, time_to: prev.time_from }))
+    }
   }
 
   const applyDurationPreset = (days) => {
     setSearchParams((prev) => ({
       ...prev,
       date_to: addDaysToDate(prev.date_from, days),
-      time_to: prev.time_from,
+      time_to: syncEndTime ? prev.time_from : prev.time_to,
     }))
   }
 
@@ -1016,9 +1038,20 @@ export default function CarsPage() {
 
               {/* Dropoff Date & Time Block */}
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-gray-600 flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-blue-600" /> End Date & Time
-                </label>
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-xs font-semibold text-gray-600 flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-blue-600" /> End Date & Time
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={syncEndTime}
+                      onChange={(e) => handleSyncEndTimeToggle(e.target.checked)}
+                      className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                    <span className="text-[11px] font-medium text-gray-500">Same time</span>
+                  </label>
+                </div>
                 <div className="grid grid-cols-[1fr_90px] gap-2">
                   <input
                     type="date"
@@ -1031,7 +1064,8 @@ export default function CarsPage() {
                     name="time_to"
                     value={searchParams.time_to}
                     onChange={handleParamChange}
-                    className="w-full bg-white border border-gray-300 rounded-xl px-2 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all cursor-pointer"
+                    disabled={syncEndTime}
+                    className="w-full bg-white border border-gray-300 rounded-xl px-2 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all cursor-pointer disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
                   >
                     {TIME_SLOTS.map((t) => (
                       <option key={t} value={t}>
