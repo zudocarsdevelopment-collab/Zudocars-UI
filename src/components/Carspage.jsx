@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   Star,
   Users,
@@ -753,6 +754,7 @@ export default function CarsPage() {
   const [error, setError] = useState(null)
   const [isSearched, setIsSearched] = useState(false)
   const [bookingCar, setBookingCar] = useState(null)
+  const [urlSearchParams] = useSearchParams()
 
   const safeDefaultStart = getSafeDefaultStart()
   const [searchParams, setSearchParams] = useState({
@@ -840,11 +842,10 @@ export default function CarsPage() {
     }))
   }
 
-  const handleAvailabilitySearch = async (e) => {
-    if (e) e.preventDefault()
+  const fetchAvailableVehicles = async (paramsToUse) => {
     setError(null)
 
-    if (!isStartTimeBookable(searchParams.date_from, searchParams.time_from)) {
+    if (!isStartTimeBookable(paramsToUse.date_from, paramsToUse.time_from)) {
       setError(`Pickup time needs to be at least ${MIN_LEAD_MINUTES} minutes from now. Please choose a later time.`)
       return
     }
@@ -852,14 +853,16 @@ export default function CarsPage() {
     setSearchLoading(true)
 
     const payload = {
-      date_from: searchParams.date_from,
-      time_from: searchParams.time_from,
-      date_to: searchParams.date_to,
-      time_to: searchParams.time_to,
-      pickup_location_id: searchParams.pickup_location_id,
-      dropoff_location_id: searchParams.dropoff_location_id,
-      vehicle_type: searchParams.vehicle_type,
+      date_from: paramsToUse.date_from,
+      time_from: paramsToUse.time_from,
+      date_to: paramsToUse.date_to,
+      time_to: paramsToUse.time_to,
+      pickup_location_id: paramsToUse.pickup_location_id,
+      dropoff_location_id: paramsToUse.dropoff_location_id,
+      vehicle_type: paramsToUse.vehicle_type,
     }
+
+    console.log('[CarsPage] fetching available vehicles', payload)
 
     try {
       const response = await fetch(AVAILABLE_API_URL, {
@@ -875,7 +878,22 @@ export default function CarsPage() {
       }
 
       const data = await response.json()
-      const rawVehicles = data.vehicles || (Array.isArray(data) ? data : [])
+      let rawVehicles = []
+
+      if (Array.isArray(data)) {
+        rawVehicles = data
+      } else if (Array.isArray(data.vehicles)) {
+        rawVehicles = data.vehicles
+      } else if (Array.isArray(data.results)) {
+        rawVehicles = data.results
+      } else if (Array.isArray(data.data)) {
+        rawVehicles = data.data
+      } else if (data?.data?.vehicles && Array.isArray(data.data.vehicles)) {
+        rawVehicles = data.data.vehicles
+      } else if (Array.isArray(data.available)) {
+        rawVehicles = data.available
+      }
+
       const normalized = rawVehicles.map(normalizeCar)
 
       setCars(normalized)
@@ -890,6 +908,47 @@ export default function CarsPage() {
     } finally {
       setSearchLoading(false)
     }
+  }
+
+  useEffect(() => {
+    const date_from = urlSearchParams.get('date_from')
+    const time_from = urlSearchParams.get('time_from')
+    const date_to = urlSearchParams.get('date_to')
+    const time_to = urlSearchParams.get('time_to')
+    const pickup_location_id = Number(urlSearchParams.get('pickup_location_id') ?? '')
+    const dropoff_location_id = Number(urlSearchParams.get('dropoff_location_id') ?? '')
+    const vehicle_type = urlSearchParams.get('vehicle_type')
+
+    const hasUrlParams =
+      date_from &&
+      time_from &&
+      date_to &&
+      time_to &&
+      pickup_location_id > 0 &&
+      dropoff_location_id > 0 &&
+      vehicle_type
+
+    if (!hasUrlParams) {
+      return
+    }
+
+    const parsedParams = {
+      date_from,
+      time_from,
+      date_to,
+      time_to,
+      pickup_location_id,
+      dropoff_location_id,
+      vehicle_type,
+    }
+
+    setSearchParams(parsedParams)
+    fetchAvailableVehicles(parsedParams)
+  }, [urlSearchParams])
+
+  const handleAvailabilitySearch = async (e) => {
+    if (e) e.preventDefault()
+    await fetchAvailableVehicles(searchParams)
   }
 
   const brands = useMemo(() => [...new Set(cars.map((c) => c.brand))].sort(), [cars])
