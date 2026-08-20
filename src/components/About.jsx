@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom'
+import { Link } from "react-router-dom";
+import { useState } from "react";
 import {
   ShieldCheck,
   Truck,
@@ -8,76 +9,78 @@ import {
   Users,
   Car,
   Star,
-} from 'lucide-react'
-import { cn } from '../lib/cn'
+} from "lucide-react";
+import { cn } from "../lib/cn";
+import EnquiryModal from "./EnquiryModal";
 
 const stats = [
-  { label: 'Years on Kerala roads', value: '8+' },
-  { label: 'Cars in the fleet', value: '150+' },
-  { label: 'Districts covered', value: '14' },
-  { label: 'Happy drivers', value: '25K+' },
-]
+  { label: "Years on Kerala roads", value: "8+" },
+  { label: "Cars in the fleet", value: "150+" },
+  { label: "Districts covered", value: "14" },
+  { label: "Happy drivers", value: "25K+" },
+];
 
 const values = [
   {
     icon: ShieldCheck,
-    title: 'Verified, inspected fleet',
-    desc: 'Every car passes a 40-point check before it reaches you — tyres, AC, brakes, papers, all sorted.',
+    title: "Verified, inspected fleet",
+    desc: "Every car passes a 40-point check before it reaches you — tyres, AC, brakes, papers, all sorted.",
   },
   {
     icon: Truck,
-    title: 'Doorstep delivery',
-    desc: 'Pick a spot anywhere from Kochi to Kasaragod. We drive it to you, no counter queues.',
+    title: "Doorstep delivery",
+    desc: "Pick a spot anywhere from Kochi to Kasaragod. We drive it to you, no counter queues.",
   },
   {
     icon: Clock,
-    title: '24/7 road support',
-    desc: 'A flat tyre near Munnar at midnight is still just a phone call away from help.',
+    title: "24/7 road support",
+    desc: "A flat tyre near Munnar at midnight is still just a phone call away from help.",
   },
   {
     icon: BadgeIndianRupee,
-    title: 'Transparent pricing',
+    title: "Transparent pricing",
     desc: 'The price you see at booking is the price you pay. No surprise "convenience" fees.',
   },
-]
+];
 
 const routes = [
   {
-    place: 'Munnar',
-    tag: 'Hill route',
-    detail: '4h 30m from Kochi',
-    img: 'https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?q=80&w=800&auto=format&fit=crop',
+    place: "Munnar",
+    tag: "Hill route",
+    detail: "4h 30m from Kochi",
+    img: "/images/Munnar.jpg",
   },
   {
-    place: 'Alleppey',
-    tag: 'Backwater route',
-    detail: '1h 45m from Kochi',
-    img: 'https://images.unsplash.com/photo-1602308176936-b361f0aa2c65?q=80&w=800&auto=format&fit=crop',
+    place: "Alleppey",
+    tag: "Backwater route",
+    detail: "1h 45m from Kochi",
+    img: "/images/Alleppey.jpg",
   },
   {
-    place: 'Wayanad',
-    tag: 'Forest route',
-    detail: '6h from Kochi',
-    img: 'https://images.unsplash.com/photo-1590077428593-a55bb07c4665?q=80&w=800&auto=format&fit=crop',
+    place: "Wayanad",
+    tag: "Forest route",
+    detail: "6h from Kochi",
+    img: "/images/wayannad.jpg",
   },
   {
-    place: 'Kovalam',
-    tag: 'Coastal route',
-    detail: '30m from Trivandrum',
-    img: 'https://images.unsplash.com/photo-1602010789026-9c8c67d0a4b6?q=80&w=800&auto=format&fit=crop',
+    place: "Kovalam",
+    tag: "Coastal route",
+    detail: "30m from Trivandrum",
+    img: "/images/Kovalam.jpg",
   },
-]
+];
 
 export default function About() {
+  const [isEnquiryOpen, setIsEnquiryOpen] = useState(false);
+
   return (
     <div className="bg-black text-white">
-
       {/* Hero */}
       <section className="relative min-h-[90vh] flex items-end overflow-hidden pt-24">
         <img
-          src="https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?q=80&w=1600&auto=format&fit=crop"
+          src="/images/Kerala.jpg"
           alt="Kerala backwaters at dusk"
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-contain object-center bg-black"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/20" />
         <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/20 to-transparent" />
@@ -96,12 +99,16 @@ export default function About() {
           <p className="mt-6 max-w-xl text-base sm:text-lg text-white/70 leading-relaxed">
             We're a self-drive car rental built for God's Own Country — from
             Kochi's city lanes to Munnar's hairpin bends and Alleppey's
-            backwater roads. No agents, no drama. Just a clean car, a full
-            tank of trust, and the keys in your hand.
+            backwater roads. No agents, no drama. Just a clean car, a full tank
+            of trust, and the keys in your hand.
           </p>
           <div className="mt-9 flex flex-wrap gap-4">
             <a
               href="#booking"
+              onClick={(event) => {
+                event.preventDefault();
+                setIsEnquiryOpen(true);
+              }}
               className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-7 py-3.5 rounded-xl text-sm font-bold tracking-wide hover:opacity-95 active:scale-[0.98] transition-all shadow-[0_4px_20px_rgba(37,99,235,0.35)]"
             >
               Book a car
@@ -122,8 +129,12 @@ export default function About() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 bg-white/[0.04] backdrop-blur-xl border border-white/10 rounded-2xl p-6 sm:p-8">
             {stats.map((s) => (
               <div key={s.label} className="text-center lg:text-left">
-                <div className="text-3xl sm:text-4xl font-black text-white">{s.value}</div>
-                <div className="mt-1 text-xs sm:text-sm text-white/50 font-medium">{s.label}</div>
+                <div className="text-3xl sm:text-4xl font-black text-white">
+                  {s.value}
+                </div>
+                <div className="mt-1 text-xs sm:text-sm text-white/50 font-medium">
+                  {s.label}
+                </div>
               </div>
             ))}
           </div>
@@ -136,7 +147,7 @@ export default function About() {
           <div className="relative">
             <div className="aspect-[4/5] rounded-2xl overflow-hidden border border-white/10">
               <img
-                src="https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?q=80&w=1000&auto=format&fit=crop"
+                src="/images/ourStory.jpg"
                 alt="Winding hill road through Kerala's hills"
                 className="w-full h-full object-cover"
               />
@@ -225,9 +236,9 @@ export default function About() {
               </h2>
             </div>
             <p className="text-sm text-white/50 max-w-xs">
-              Every route below is one our own team has driven — so the
-              pickup point, the fuel stops, and the traffic patterns are
-              already worked out for you.
+              Every route below is one our own team has driven — so the pickup
+              point, the fuel stops, and the traffic patterns are already worked
+              out for you.
             </p>
           </div>
 
@@ -270,6 +281,10 @@ export default function About() {
             </p>
             <a
               href="#booking"
+              onClick={(event) => {
+                event.preventDefault();
+                setIsEnquiryOpen(true);
+              }}
               className="relative mt-8 inline-flex items-center gap-2 bg-black text-white px-8 py-3.5 rounded-xl text-sm font-bold tracking-wide hover:bg-black/80 active:scale-[0.98] transition-all"
             >
               Book Now
@@ -277,6 +292,9 @@ export default function About() {
           </div>
         </div>
       </section>
+      {isEnquiryOpen && (
+        <EnquiryModal onClose={() => setIsEnquiryOpen(false)} />
+      )}
     </div>
-  )
+  );
 }
