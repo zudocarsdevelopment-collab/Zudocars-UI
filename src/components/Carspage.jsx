@@ -151,6 +151,7 @@ function buildBookingEnquiryMessage({ car, searchParams, customerName, customerP
     '🚗 New booking enquiry',
     '',
     `Vehicle: ${car.name} (${car.plate})`,
+    `Fuel: ${car.fuel} · Transmission: ${car.transmission}`,
     `Trip: ${searchParams.date_from} ${searchParams.time_from} → ${searchParams.date_to} ${searchParams.time_to}`,
     `Pickup location: ${locationName(searchParams.pickup_location_id)}`,
     `Dropoff location: ${locationName(searchParams.dropoff_location_id)}`,
@@ -216,12 +217,18 @@ async function generateEstimatePdf({ car, searchParams, customerName, customerPh
 function FilterSidebar({
   brands,
   categories,
+  fuelTypes,
+  transmissions,
   minPrice,
   maxPrice,
   selectedBrands,
   toggleBrand,
   selectedCategories,
   toggleCategory,
+  selectedFuelTypes,
+  toggleFuelType,
+  selectedTransmissions,
+  toggleTransmission,
   priceRange,
   setPriceRange,
   clearAll,
@@ -316,6 +323,54 @@ function FilterSidebar({
           })}
         </div>
       </div>
+
+      {fuelTypes.length > 0 && (
+        <div>
+          <h4 className="text-sm font-semibold text-gray-900 mb-4">Fuel type</h4>
+          <div className="flex flex-wrap gap-2">
+            {fuelTypes.map((fuel) => {
+              const active = selectedFuelTypes.includes(fuel)
+              return (
+                <button
+                  key={fuel}
+                  onClick={() => toggleFuelType(fuel)}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                    active
+                      ? 'bg-blue-600 border-blue-600 text-white'
+                      : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'
+                  }`}
+                >
+                  {fuel}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {transmissions.length > 0 && (
+        <div>
+          <h4 className="text-sm font-semibold text-gray-900 mb-4">Transmission</h4>
+          <div className="flex flex-wrap gap-2">
+            {transmissions.map((t) => {
+              const active = selectedTransmissions.includes(t)
+              return (
+                <button
+                  key={t}
+                  onClick={() => toggleTransmission(t)}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                    active
+                      ? 'bg-blue-600 border-blue-600 text-white'
+                      : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'
+                  }`}
+                >
+                  {t}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -774,6 +829,8 @@ export default function CarsPage() {
 
   const [selectedBrands, setSelectedBrands] = useState([])
   const [selectedCategories, setSelectedCategories] = useState([])
+  const [selectedFuelTypes, setSelectedFuelTypes] = useState([])
+  const [selectedTransmissions, setSelectedTransmissions] = useState([])
   const [priceRange, setPriceRange] = useState([0, 0])
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState('recommended')
@@ -953,6 +1010,14 @@ export default function CarsPage() {
 
   const brands = useMemo(() => [...new Set(cars.map((c) => c.brand))].sort(), [cars])
   const categories = useMemo(() => [...new Set(cars.map((c) => c.category))].sort(), [cars])
+  const fuelTypes = useMemo(
+    () => [...new Set(cars.map((c) => c.fuel).filter((f) => f && f !== '—'))].sort(),
+    [cars]
+  )
+  const transmissions = useMemo(
+    () => [...new Set(cars.map((c) => c.transmission).filter((t) => t && t !== '—'))].sort(),
+    [cars]
+  )
   const minPrice = useMemo(() => (cars.length ? Math.min(...cars.map((c) => c.price)) : 0), [cars])
   const maxPrice = useMemo(() => (cars.length ? Math.max(...cars.map((c) => c.price)) : 0), [cars])
 
@@ -962,9 +1027,17 @@ export default function CarsPage() {
   const toggleCategory = (cat) =>
     setSelectedCategories((prev) => (prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]))
 
+  const toggleFuelType = (fuel) =>
+    setSelectedFuelTypes((prev) => (prev.includes(fuel) ? prev.filter((f) => f !== fuel) : [...prev, fuel]))
+
+  const toggleTransmission = (t) =>
+    setSelectedTransmissions((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]))
+
   const clearAll = () => {
     setSelectedBrands([])
     setSelectedCategories([])
+    setSelectedFuelTypes([])
+    setSelectedTransmissions([])
     setPriceRange([minPrice, maxPrice])
     setSearch('')
   }
@@ -972,6 +1045,8 @@ export default function CarsPage() {
   const activeCount =
     selectedBrands.length +
     selectedCategories.length +
+    selectedFuelTypes.length +
+    selectedTransmissions.length +
     (priceRange[0] !== minPrice || priceRange[1] !== maxPrice ? 1 : 0)
 
   const sortOptions = [
@@ -984,12 +1059,22 @@ export default function CarsPage() {
     let result = cars.filter((car) => {
       const matchesBrand = selectedBrands.length === 0 || selectedBrands.includes(car.brand)
       const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(car.category)
+      const matchesFuel = selectedFuelTypes.length === 0 || selectedFuelTypes.includes(car.fuel)
+      const matchesTransmission =
+        selectedTransmissions.length === 0 || selectedTransmissions.includes(car.transmission)
       const matchesPrice = car.price >= priceRange[0] && car.price <= priceRange[1]
       const matchesSearch =
         car.name.toLowerCase().includes(search.toLowerCase()) ||
         car.brand.toLowerCase().includes(search.toLowerCase()) ||
         car.plate.toLowerCase().includes(search.toLowerCase())
-      return matchesBrand && matchesCategory && matchesPrice && matchesSearch
+      return (
+        matchesBrand &&
+        matchesCategory &&
+        matchesFuel &&
+        matchesTransmission &&
+        matchesPrice &&
+        matchesSearch
+      )
     })
 
     switch (sort) {
@@ -1003,7 +1088,7 @@ export default function CarsPage() {
         break
     }
     return result
-  }, [cars, selectedBrands, selectedCategories, priceRange, search, sort])
+  }, [cars, selectedBrands, selectedCategories, selectedFuelTypes, selectedTransmissions, priceRange, search, sort])
 
   return (
     <div className="min-h-screen bg-gray-50 pt-24 lg:pt-28 font-sans">
@@ -1186,12 +1271,18 @@ export default function CarsPage() {
                 <FilterSidebar
                   brands={brands}
                   categories={categories}
+                  fuelTypes={fuelTypes}
+                  transmissions={transmissions}
                   minPrice={minPrice}
                   maxPrice={maxPrice}
                   selectedBrands={selectedBrands}
                   toggleBrand={toggleBrand}
                   selectedCategories={selectedCategories}
                   toggleCategory={toggleCategory}
+                  selectedFuelTypes={selectedFuelTypes}
+                  toggleFuelType={toggleFuelType}
+                  selectedTransmissions={selectedTransmissions}
+                  toggleTransmission={toggleTransmission}
                   priceRange={priceRange}
                   setPriceRange={setPriceRange}
                   clearAll={clearAll}
@@ -1267,6 +1358,28 @@ export default function CarsPage() {
                       </button>
                     </span>
                   ))}
+                  {selectedFuelTypes.map((f) => (
+                    <span
+                      key={f}
+                      className="flex items-center gap-1.5 bg-blue-50 text-blue-700 text-xs font-semibold pl-3 pr-2 py-1.5 rounded-full"
+                    >
+                      {f}
+                      <button onClick={() => toggleFuelType(f)}>
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                  {selectedTransmissions.map((t) => (
+                    <span
+                      key={t}
+                      className="flex items-center gap-1.5 bg-blue-50 text-blue-700 text-xs font-semibold pl-3 pr-2 py-1.5 rounded-full"
+                    >
+                      {t}
+                      <button onClick={() => toggleTransmission(t)}>
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
                   {(priceRange[0] !== minPrice || priceRange[1] !== maxPrice) && (
                     <span className="flex items-center gap-1.5 bg-blue-50 text-blue-700 text-xs font-semibold pl-3 pr-2 py-1.5 rounded-full">
                       {formatINR(priceRange[0])} - {formatINR(priceRange[1])}
@@ -1321,12 +1434,18 @@ export default function CarsPage() {
             <FilterSidebar
               brands={brands}
               categories={categories}
+              fuelTypes={fuelTypes}
+              transmissions={transmissions}
               minPrice={minPrice}
               maxPrice={maxPrice}
               selectedBrands={selectedBrands}
               toggleBrand={toggleBrand}
               selectedCategories={selectedCategories}
               toggleCategory={toggleCategory}
+              selectedFuelTypes={selectedFuelTypes}
+              toggleFuelType={toggleFuelType}
+              selectedTransmissions={selectedTransmissions}
+              toggleTransmission={toggleTransmission}
               priceRange={priceRange}
               setPriceRange={setPriceRange}
               clearAll={clearAll}
