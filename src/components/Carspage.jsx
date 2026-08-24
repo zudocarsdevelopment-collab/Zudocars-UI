@@ -19,6 +19,8 @@ import {
   Loader2,
   AlertTriangle,
 } from 'lucide-react'
+import DateRangePicker, { formatPickerDate } from './DateRangePicker'
+import TimeRangePicker from './TimeRangePicker'
 
 const API_URL = 'https://api.zudocars.com/api/vehicles/'
 const AVAILABLE_API_URL = 'https://api.zudocars.com/api/vehicles/available/'
@@ -101,10 +103,34 @@ function normalizeCar(raw) {
   }
 }
 
+function formatLocalDate(d) {
+  if (!d) return ''
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function parseLocalDate(dateStr) {
+  if (!dateStr) return new Date()
+  const parts = dateStr.split('-').map(Number)
+  if (parts.length < 3) return new Date()
+  const [year, month, day] = parts
+  return new Date(year, month - 1, day)
+}
+
 function addDaysToDate(dateStr, days) {
-  const d = new Date(dateStr + 'T00:00:00')
-  d.setDate(d.getDate() + days)
-  return d.toISOString().split('T')[0]
+  const d = parseLocalDate(dateStr)
+  d.setDate(d.getDate() + Number(days))
+  return formatLocalDate(d)
+}
+
+function calculateDaySpan(startStr, endStr) {
+  if (!startStr || !endStr) return null
+  const s = parseLocalDate(startStr)
+  const e = parseLocalDate(endStr)
+  const diffTime = e.getTime() - s.getTime()
+  return Math.round(diffTime / (1000 * 60 * 60 * 24))
 }
 
 // The API needs date_from/time_from to sit at least `pre_start_cooldown_hours`
@@ -119,13 +145,16 @@ function getSafeDefaultStart() {
   const roundedMinutes = Math.ceil(d.getMinutes() / 30) * 30
   d.setMinutes(0, 0, 0)
   d.setMinutes(roundedMinutes)
-  const date = d.toISOString().split('T')[0]
+  const date = formatLocalDate(d)
   const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes() % 60).padStart(2, '0')}`
   return { date, time }
 }
 
 function isStartTimeBookable(dateStr, timeStr) {
-  const selected = new Date(`${dateStr}T${timeStr}:00`)
+  if (!dateStr || !timeStr) return false
+  const [year, month, day] = dateStr.split('-').map(Number)
+  const [hours, minutes] = timeStr.split(':').map(Number)
+  const selected = new Date(year, month - 1, day, hours, minutes, 0)
   const earliestAllowed = new Date(Date.now() + MIN_LEAD_MINUTES * 60 * 1000)
   return selected.getTime() >= earliestAllowed.getTime()
 }
@@ -899,6 +928,31 @@ export default function CarsPage() {
     }))
   }
 
+  const handleDateRangeChange = (startDate, endDate) => {
+    setSearchParams((prev) => ({
+      ...prev,
+      date_from: startDate,
+      date_to: endDate,
+    }))
+  }
+
+  const handleTimeRangeChange = ({ time_from, time_to }) => {
+    setSearchParams((prev) => ({
+      ...prev,
+      time_from,
+      time_to,
+    }))
+  }
+
+  const handleClearDates = () => {
+    const defaultStart = getSafeDefaultStart()
+    setSearchParams((prev) => ({
+      ...prev,
+      date_from: defaultStart.date,
+      date_to: addDaysToDate(defaultStart.date, 1),
+    }))
+  }
+
   const fetchAvailableVehicles = async (paramsToUse) => {
     setError(null)
 
@@ -1106,30 +1160,41 @@ export default function CarsPage() {
             {/* Quick duration presets */}
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-semibold text-gray-500 mr-1">Quick pick:</span>
-              {DURATION_PRESETS.map((p) => (
-                <button
-                  key={p.label}
-                  type="button"
-                  onClick={() => applyDurationPreset(p.days)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-300 bg-white text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors"
-                >
-                  {p.label}
-                </button>
-              ))}
+              {DURATION_PRESETS.map((p) => {
+                const currentSpan = calculateDaySpan(searchParams.date_from, searchParams.date_to)
+                const isActive = currentSpan === p.days
+                return (
+                  <button
+                    key={p.label}
+                    type="button"
+                    onClick={() => applyDurationPreset(p.days)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                      isActive
+                        ? 'bg-blue-600 border-blue-600 text-white shadow-sm shadow-blue-600/20'
+                        : 'border-gray-300 bg-white text-gray-600 hover:border-blue-400 hover:text-blue-600'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                )
+              })}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
               {/* Pickup & Dropoff Locations */}
-              <div className="flex flex-col gap-1 md:col-span-2 lg:col-span-1">
-                <label className="text-xs font-semibold text-gray-600 flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-blue-600" /> Locations
-                </label>
+              <div className="flex flex-col sm:col-span-2 lg:col-span-4">
+                <div className="h-5 flex items-center mb-1.5">
+                  <label className="text-xs font-semibold text-gray-600 flex items-center gap-1.5 whitespace-nowrap">
+                    <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" /> Locations
+                  </label>
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   <select
                     name="pickup_location_id"
+                    aria-label="Pickup location"
                     value={searchParams.pickup_location_id}
                     onChange={handleParamChange}
-                    className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
+                    className="w-full bg-white border border-gray-300 rounded-xl px-2.5 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all h-[38px]"
                   >
                     {LOCATIONS.map((loc) => (
                       <option key={loc.id} value={loc.id}>
@@ -1139,9 +1204,10 @@ export default function CarsPage() {
                   </select>
                   <select
                     name="dropoff_location_id"
+                    aria-label="Dropoff location"
                     value={searchParams.dropoff_location_id}
                     onChange={handleParamChange}
-                    className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
+                    className="w-full bg-white border border-gray-300 rounded-xl px-2.5 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all h-[38px]"
                   >
                     {LOCATIONS.map((loc) => (
                       <option key={loc.id} value={loc.id}>
@@ -1152,99 +1218,92 @@ export default function CarsPage() {
                 </div>
               </div>
 
-              {/* Pickup Date & Time Block */}
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-gray-600 flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5 text-blue-600" /> Start Date & Time
-                </label>
-                <div className="grid grid-cols-[1fr_90px] gap-2">
-                  <input
-                    type="date"
-                    name="date_from"
-                    value={searchParams.date_from}
-                    onChange={handleParamChange}
-                    className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all cursor-pointer"
-                  />
-                  <select
-                    name="time_from"
-                    value={searchParams.time_from}
-                    onChange={handleParamChange}
-                    className="w-full bg-white border border-gray-300 rounded-xl px-2 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all cursor-pointer"
-                  >
-                    {TIME_SLOTS.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {/* Rental Dates - Unified DateRangePicker for both Start & End Date */}
+              <div className="flex flex-col sm:col-span-2 lg:col-span-3">
+                <DateRangePicker
+                  startDate={searchParams.date_from}
+                  endDate={searchParams.date_to}
+                  onRangeChange={handleDateRangeChange}
+                  onClear={handleClearDates}
+                >
+                  {({ openPicker, formatDate }) => (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex flex-col">
+                        <div className="h-5 flex items-center mb-1.5">
+                          <label className="text-xs font-semibold text-gray-600 flex items-center gap-1.5 whitespace-nowrap">
+                            <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" /> Start Date
+                          </label>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={openPicker}
+                          className="w-full bg-white border border-gray-300 rounded-xl px-2.5 py-2 text-xs font-medium text-gray-800 hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all text-left flex items-center justify-between h-[38px]"
+                        >
+                          <span className="truncate">{formatDate(searchParams.date_from) || 'Start Date'}</span>
+                          <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0 ml-1" />
+                        </button>
+                      </div>
+                      <div className="flex flex-col">
+                        <div className="h-5 flex items-center mb-1.5">
+                          <label className="text-xs font-semibold text-gray-600 flex items-center gap-1.5 whitespace-nowrap">
+                            <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" /> End Date
+                          </label>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={openPicker}
+                          className="w-full bg-white border border-gray-300 rounded-xl px-2.5 py-2 text-xs font-medium text-gray-800 hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all text-left flex items-center justify-between h-[38px]"
+                        >
+                          <span className="truncate">{formatDate(searchParams.date_to) || 'End Date'}</span>
+                          <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0 ml-1" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </DateRangePicker>
               </div>
 
-              {/* Dropoff Date & Time Block */}
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center justify-between gap-2">
-                  <label className="text-xs font-semibold text-gray-600 flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5 text-blue-600" /> End Date & Time
-                  </label>
-                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={syncEndTime}
-                      onChange={(e) => handleSyncEndTimeToggle(e.target.checked)}
-                      className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                    />
-                    <span className="text-[11px] font-medium text-gray-500">Same time</span>
-                  </label>
-                </div>
-                <div className="grid grid-cols-[1fr_90px] gap-2">
-                  <input
-                    type="date"
-                    name="date_to"
-                    value={searchParams.date_to}
-                    onChange={handleParamChange}
-                    className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all cursor-pointer"
-                  />
-                  <select
-                    name="time_to"
-                    value={searchParams.time_to}
-                    onChange={handleParamChange}
-                    disabled={syncEndTime}
-                    className="w-full bg-white border border-gray-300 rounded-xl px-2 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all cursor-pointer disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
-                  >
-                    {TIME_SLOTS.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {/* Sleek Compact TimeRangePicker */}
+              <div className="flex flex-col sm:col-span-1 lg:col-span-2">
+                <TimeRangePicker
+                  timeFrom={searchParams.time_from}
+                  timeTo={searchParams.time_to}
+                  syncEndTime={syncEndTime}
+                  onTimeChange={handleTimeRangeChange}
+                  onSyncToggle={handleSyncEndTimeToggle}
+                />
               </div>
 
               {/* Vehicle Type */}
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-gray-600 flex items-center gap-1">
-                  <Settings2 className="w-3.5 h-3.5 text-blue-600" /> Type
-                </label>
+              <div className="flex flex-col sm:col-span-1 lg:col-span-1">
+                <div className="h-5 flex items-center mb-1.5">
+                  <label className="text-xs font-semibold text-gray-600 flex items-center gap-1.5 whitespace-nowrap">
+                    <Settings2 className="w-3.5 h-3.5 text-blue-600 shrink-0" /> Type
+                  </label>
+                </div>
                 <select
                   name="vehicle_type"
+                  aria-label="Vehicle type"
                   value={searchParams.vehicle_type}
                   onChange={handleParamChange}
-                  className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
+                  className="w-full bg-white border border-gray-300 rounded-xl px-2.5 py-2 text-xs font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all h-[38px]"
                 >
                   <option value="car">Car</option>
-                  
                 </select>
               </div>
 
               {/* Submit Action */}
-              <div className="flex items-end">
+              <div className="flex flex-col sm:col-span-2 lg:col-span-2">
+                <div className="h-5 flex items-center mb-1.5">
+                  <span className="text-xs font-semibold text-transparent select-none invisible">&nbsp;</span>
+                </div>
                 <button
                   type="submit"
                   disabled={searchLoading}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-xl transition duration-200 flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 disabled:opacity-50 text-xs sm:text-sm h-[38px]"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 rounded-xl transition duration-200 flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 disabled:opacity-50 text-xs sm:text-sm h-[38px] whitespace-nowrap"
                 >
-                  <Search className="w-4 h-4" />
-                  {searchLoading ? 'Searching…' : 'Show Available Cars'}
+                  <Search className="w-4 h-4 shrink-0" />
+                  <span>{searchLoading ? 'Searching…' : 'Show Available Cars'}</span>
                 </button>
               </div>
             </div>
