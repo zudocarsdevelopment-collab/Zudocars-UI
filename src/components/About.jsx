@@ -176,7 +176,7 @@ export default function About() {
                 className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl text-sm font-bold bg-white/[0.05] hover:bg-white/[0.1] border border-white/15 text-white hover:border-cyan-400/40 backdrop-blur-md transition-all"
               >
                 <MessageCircle className="w-4 h-4 text-emerald-400" />
-                WhatsApp Concierge
+                Chat on WhatsApp
               </a>
             </div>
           </div>
