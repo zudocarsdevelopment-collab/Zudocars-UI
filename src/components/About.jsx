@@ -170,7 +170,7 @@ export default function About() {
                 <ArrowRight className="w-4 h-4" />
               </Link>
               <a
-                href="https://wa.me/919387005555?text=Hi%20Zudo%20Cars,%20I%20have%20an%20inquiry%20about%20renting%20a%20car"
+                href="https://wa.me/918111946664?text=Hi%20Zudo%20Cars,%20I%20have%20an%20inquiry%20about%20renting%20a%20car"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl text-sm font-bold bg-white/[0.05] hover:bg-white/[0.1] border border-white/15 text-white hover:border-cyan-400/40 backdrop-blur-md transition-all"
@@ -452,7 +452,7 @@ export default function About() {
                 Browse All Cars
               </Link>
               <a
-                href="https://wa.me/919387005555?text=Hi%20Zudo%20Cars,%20I%20would%20like%20to%20know%20about%20the%20Onam%20Offers%20and%20reserve%20a%20car"
+                href="https://wa.me/918111946664?text=Hi%20Zudo%20Cars,%20I%20would%20like%20to%20know%20about%20the%20Onam%20Offers%20and%20reserve%20a%20car"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full sm:w-auto inline-flex items-center justify-center bg-white/20 hover:bg-white/30 text-white border border-white/30 px-8 py-3.5 rounded-xl text-sm font-bold tracking-wide transition-all backdrop-blur-md min-w-[180px]"

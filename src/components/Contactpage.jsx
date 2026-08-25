@@ -3,14 +3,11 @@ import {
   Phone,
   Mail,
   MapPin,
-  Clock,
   Send,
   CheckCircle2,
   MessageCircle,
   ExternalLink,
   ChevronDown,
-  ShieldCheck,
-  FileText,
   Sparkles,
 } from 'lucide-react'
 
@@ -18,9 +15,9 @@ const contactInfo = [
   {
     icon: Phone,
     label: 'Call Us',
-    value: '+91 93870 05555',
+    value: '+91 81119 46664',
     sub: 'Available 24/7 for booking support',
-    href: 'tel:+919387005555',
+    href: 'tel:+918111946664',
     actionText: 'Call now',
     color: 'text-blue-600',
     bg: 'bg-blue-50',
@@ -28,9 +25,9 @@ const contactInfo = [
   {
     icon: MessageCircle,
     label: 'WhatsApp',
-    value: '+91 93870 05555',
+    value: '+91 81119 46664',
     sub: 'Instant replies in under 5 minutes',
-    href: 'https://wa.me/919387005555?text=Hi%20Zudo%20Cars,%20I%20have%20an%20inquiry',
+    href: 'https://wa.me/918111946664?text=Hi%20Zudo%20Cars,%20I%20have%20an%20inquiry',
     actionText: 'Chat on WhatsApp',
     color: 'text-emerald-600',
     bg: 'bg-emerald-50',
@@ -38,9 +35,9 @@ const contactInfo = [
   {
     icon: Mail,
     label: 'Email Us',
-    value: 'support@zudocars.com',
+    value: 'hello@zudocars.com',
     sub: 'Detailed estimates & corporate quotes',
-    href: 'mailto:support@zudocars.com',
+    href: 'mailto:hello@zudocars.com',
     actionText: 'Send email',
     color: 'text-indigo-600',
     bg: 'bg-indigo-50',
@@ -125,7 +122,7 @@ export default function ContactPage() {
           </h1>
           <p className="text-gray-500 text-sm sm:text-base max-w-2xl leading-relaxed">
             Have questions about booking a car, airport pickups, long-term rentals, or need immediate roadside support?
-            Our friendly concierge team is reachable 24/7.
+            Our friendly support team is reachable 24/7.
           </p>
         </div>
       </div>
@@ -221,7 +218,7 @@ export default function ContactPage() {
                     <input
                       type="tel"
                       required
-                      placeholder="e.g. +91 98765 43210"
+                      placeholder="e.g. +91 81119 46664"
                       value={form.phone}
                       onChange={update('phone')}
                       className="w-full h-11 px-3.5 rounded-xl border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
@@ -318,7 +315,7 @@ export default function ContactPage() {
                 Need an immediate rate estimate or car confirmation in Kochi or Trivandrum? Chat directly with our reservations desk.
               </p>
               <a
-                href="https://wa.me/919387005555?text=Hi%20Zudo%20Cars,%20I%20would%20like%20to%20book%20a%20car"
+                href="https://wa.me/918111946664?text=Hi%20Zudo%20Cars,%20I%20would%20like%20to%20book%20a%20car"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full bg-white hover:bg-emerald-50 text-emerald-800 font-bold text-xs sm:text-sm py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md"
