@@ -1,60 +1,138 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Calendar, Clock, ChevronRight } from 'lucide-react'
+import { useEffect, useMemo, useState } from "react";
+import { Calendar, Clock, ChevronRight, AlertCircle } from "lucide-react";
 
 const DURATIONS = [
-  { id: '1', label: '1 day' },
-  { id: '2', label: '2 days' },
-  { id: '3', label: '3 days' },
-  { id: 'custom', label: 'Custom' },
-]
+  { id: "1", label: "1 day" },
+  { id: "2", label: "2 days" },
+  { id: "3", label: "3 days" },
+  { id: "custom", label: "Custom" },
+];
+
+// Minimum lead time between "now" and the pickup date+time, matching the
+// booking API's pre_start_cooldown_hours requirement (~9 min, padded to 30).
+const MIN_LEAD_MINUTES = 30;
+
+function formatLocalDate(d) {
+  if (!d) return "";
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function parseLocalDate(dateStr) {
+  if (!dateStr) return new Date();
+  const parts = dateStr.split("-").map(Number);
+  if (parts.length < 3) return new Date();
+  const [year, month, day] = parts;
+  return new Date(year, month - 1, day);
+}
 
 function todayStr() {
-  return new Date().toISOString().split('T')[0]
+  return formatLocalDate(new Date());
 }
 
 function addDays(dateStr, days) {
-  if (!dateStr) return todayStr()
-  const d = new Date(dateStr)
-  d.setDate(d.getDate() + days)
-  return d.toISOString().split('T')[0]
+  if (!dateStr) return todayStr();
+  const d = parseLocalDate(dateStr);
+  d.setDate(d.getDate() + Number(days));
+  return formatLocalDate(d);
 }
 
 function formatDateDisplay(dateStr) {
-  if (!dateStr) return ''
-  const [year, month, day] = dateStr.split('-')
-  const date = new Date(year, month - 1, day)
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  if (!dateStr) return "";
+  const [year, month, day] = dateStr.split("-");
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function pad(n) {
+  return String(n).padStart(2, "0");
+}
+
+// Earliest bookable pickup moment: now + lead time, rounded up to the next
+// 5-minute mark so it lines up with what people actually type/pick.
+function getEarliestPickup() {
+  const d = new Date(Date.now() + MIN_LEAD_MINUTES * 60 * 1000);
+  const roundedMinutes = Math.ceil(d.getMinutes() / 5) * 5;
+  d.setSeconds(0, 0);
+  d.setMinutes(roundedMinutes);
+  return {
+    date: formatLocalDate(d),
+    time: `${pad(d.getHours())}:${pad(d.getMinutes() % 60 === 60 ? 0 : d.getMinutes())}`,
+  };
+}
+
+function isPickupBookable(dateStr, timeStr) {
+  if (!dateStr || !timeStr) return false;
+  const selected = new Date(`${dateStr}T${timeStr}:00`);
+  const earliestAllowed = new Date(Date.now() + MIN_LEAD_MINUTES * 60 * 1000);
+  return selected.getTime() >= earliestAllowed.getTime();
 }
 
 export default function DateTimeSelector({ onChange }) {
-  const [pickupDate, setPickupDate] = useState(todayStr())
-  const [pickupTime, setPickupTime] = useState('10:00')
-  const [duration, setDuration] = useState('1')
-  const [customReturnDate, setCustomReturnDate] = useState(addDays(todayStr(), 4))
+  const earliest = useMemo(() => getEarliestPickup(), []);
+
+  const [pickupDate, setPickupDate] = useState(earliest.date);
+  const [pickupTime, setPickupTime] = useState(earliest.time);
+  const [duration, setDuration] = useState("1");
+  const [customReturnDate, setCustomReturnDate] = useState(
+    addDays(earliest.date, 4),
+  );
 
   // Ensure customReturnDate is never earlier than pickupDate when pickupDate shifts
   useEffect(() => {
     if (customReturnDate < pickupDate) {
-      setCustomReturnDate(pickupDate)
+      setCustomReturnDate(pickupDate);
     }
-  }, [pickupDate, customReturnDate])
+  }, [pickupDate, customReturnDate]);
 
   const returnDate = useMemo(() => {
-    if (duration === 'custom') return customReturnDate
-    return addDays(pickupDate, Number(duration))
-  }, [duration, pickupDate, customReturnDate])
+    if (duration === "custom") return customReturnDate;
+    return addDays(pickupDate, Number(duration));
+  }, [duration, pickupDate, customReturnDate]);
 
   // Return time mirrors pickup time
-  const returnTime = pickupTime
+  const returnTime = pickupTime;
+
+  const isToday = pickupDate === todayStr();
+  const leadWarning = !isPickupBookable(pickupDate, pickupTime);
+
+  // Native <input type="time"> min only helps browsers that support it, so
+  // we still clamp in state - this just improves the picker UI when the
+  // browser respects it.
+  const minTimeForToday = isToday ? getEarliestPickup().time : undefined;
+
+  function handlePickupDateChange(value) {
+    setPickupDate(value);
+    // If the newly picked date is today and the current time no longer
+    // clears the lead-time bar, bump it up to the earliest valid slot.
+    if (value === todayStr() && !isPickupBookable(value, pickupTime)) {
+      setPickupTime(getEarliestPickup().time);
+    }
+  }
+
+  function handlePickupTimeChange(value) {
+    setPickupTime(value);
+  }
 
   useEffect(() => {
-    onChange?.({ pickupDate, pickupTime, returnDate, returnTime })
-  }, [pickupDate, pickupTime, returnDate, returnTime, onChange])
+    onChange?.({
+      pickupDate,
+      pickupTime,
+      returnDate,
+      returnTime,
+      isValid: isPickupBookable(pickupDate, pickupTime),
+    });
+  }, [pickupDate, pickupTime, returnDate, returnTime, onChange]);
 
   return (
     <div className="sticky top-0 z-30 bg-white border-b border-gray-100 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        
         {/* Component Header */}
         <div className="mb-3">
           <h1 className="text-base sm:text-lg font-bold text-gray-900 tracking-tight">
@@ -63,7 +141,6 @@ export default function DateTimeSelector({ onChange }) {
         </div>
 
         <div className="flex flex-col lg:flex-row lg:items-end gap-3 lg:gap-4">
-
           {/* Pickup date + time */}
           <div className="flex gap-3 flex-1">
             <label className="flex-1">
@@ -74,7 +151,7 @@ export default function DateTimeSelector({ onChange }) {
                 type="date"
                 min={todayStr()}
                 value={pickupDate}
-                onChange={(e) => setPickupDate(e.target.value)}
+                onChange={(e) => handlePickupDateChange(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
               />
             </label>
@@ -84,9 +161,14 @@ export default function DateTimeSelector({ onChange }) {
               </span>
               <input
                 type="time"
+                min={minTimeForToday}
                 value={pickupTime}
-                onChange={(e) => setPickupTime(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+                onChange={(e) => handlePickupTimeChange(e.target.value)}
+                className={`w-full px-3.5 py-2.5 rounded-xl border text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 ${
+                  leadWarning
+                    ? "border-amber-300 focus:border-amber-500"
+                    : "border-gray-200 focus:border-blue-500"
+                }`}
               />
             </label>
           </div>
@@ -104,8 +186,8 @@ export default function DateTimeSelector({ onChange }) {
                   onClick={() => setDuration(d.id)}
                   className={`flex-1 px-3 py-2.5 rounded-xl text-sm font-semibold border transition-colors ${
                     duration === d.id
-                      ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-600/20'
-                      : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                      ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-600/20"
+                      : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
                   }`}
                 >
                   {d.label}
@@ -115,7 +197,7 @@ export default function DateTimeSelector({ onChange }) {
           </div>
 
           {/* Custom return date vs. Prescribed Return Preview */}
-          {duration === 'custom' ? (
+          {duration === "custom" ? (
             <label className="lg:w-52">
               <span className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
                 <Calendar className="w-3.5 h-3.5" /> Return date
@@ -142,9 +224,16 @@ export default function DateTimeSelector({ onChange }) {
               </div>
             </div>
           )}
-
         </div>
+
+        {leadWarning && (
+          <p className="mt-2.5 flex items-center gap-1.5 text-xs font-medium text-amber-600">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+            Pickup time needs to be at least {MIN_LEAD_MINUTES} minutes from now
+            — pick a later time.
+          </p>
+        )}
       </div>
     </div>
-  )
+  );
 }

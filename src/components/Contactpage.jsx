@@ -1,86 +1,101 @@
 import { useState } from 'react'
-import { Phone, Mail, MapPin, Clock, Send, CheckCircle2, MessageCircle, Globe, Link2, Share2 } from 'lucide-react'
+import {
+  Phone,
+  Mail,
+  MapPin,
+  Send,
+  CheckCircle2,
+  MessageCircle,
+  ExternalLink,
+  ChevronDown,
+  Sparkles,
+} from 'lucide-react'
 
 const contactInfo = [
   {
     icon: Phone,
     label: 'Call Us',
     value: '+91 81119 46664',
-    sub: 'Mon - Sun, 8am - 10pm',
+    sub: 'Available 24/7 for booking support',
+    href: 'tel:+918111946664',
+    actionText: 'Call now',
+    color: 'text-blue-600',
+    bg: 'bg-blue-50',
+  },
+  {
+    icon: MessageCircle,
+    label: 'WhatsApp',
+    value: '+91 81119 46664',
+    sub: 'Instant replies in under 5 minutes',
+    href: 'https://wa.me/918111946664?text=Hi%20Zudo%20Cars,%20I%20have%20an%20inquiry',
+    actionText: 'Chat on WhatsApp',
+    color: 'text-emerald-600',
+    bg: 'bg-emerald-50',
   },
   {
     icon: Mail,
     label: 'Email Us',
     value: 'hello@zudocars.com',
-    sub: "We'll respond within 24 hours",
+    sub: 'Detailed estimates & corporate quotes',
+    href: 'mailto:hello@zudocars.com',
+    actionText: 'Send email',
+    color: 'text-indigo-600',
+    bg: 'bg-indigo-50',
   },
   {
     icon: MapPin,
-    label: 'Visit Us',
-    value: '4th Block, Koramangala',
-    sub: 'Bengaluru, Karnataka 560034',
-  },
-  {
-    icon: Clock,
-    label: 'Working Hours',
-    value: '8:00 AM - 10:00 PM',
-    sub: 'Open all days of the week',
+    label: 'Main Hub',
+    value: 'Kochi, Kerala',
+    sub: 'JLN Stadium · Airport · Edapally',
+    href: 'https://maps.google.com/?q=Kochi+Kerala',
+    actionText: 'View on map',
+    color: 'text-amber-600',
+    bg: 'bg-amber-50',
   },
 ]
 
-const topics = ['General Inquiry', 'Booking Support', 'Fleet Partnership', 'Corporate Rentals', 'Feedback']
+const topics = [
+  'General Inquiry',
+  'Booking Support',
+  'Fleet Partnership',
+  'Corporate Rentals',
+  'Long-Term Hire',
+  'Feedback',
+]
 
 const faqs = [
   {
+    q: 'What documents are required to rent a car?',
+    a: 'You will need an original valid Driving License and an ID proof (Aadhaar / Passport). International drivers require an International Driving Permit along with their passport.',
+  },
+  {
     q: 'How quickly will I get a response?',
-    a: 'Our support team typically replies within a few hours, and always within 24 hours on business days.',
+    a: 'For urgent inquiries, our WhatsApp and phone lines respond in minutes. Email queries are answered within 2 to 4 business hours.',
   },
   {
-    q: 'Can I modify or cancel a booking?',
-    a: 'Yes, bookings can be modified or cancelled from your account up to 6 hours before pickup, free of charge.',
+    q: 'Can I cancel or modify my booking?',
+    a: 'Yes, cancellations or modifications are hassle-free up to 6 hours before scheduled pickup time.',
   },
   {
-    q: 'Do you offer corporate or long-term rentals?',
-    a: 'Absolutely. Select "Corporate Rentals" above and our fleet team will reach out with custom pricing.',
+    q: 'Do you provide airport pickup and drop-off?',
+    a: 'Yes! We offer seamless handover at Cochin International Airport (COK) and Trivandrum Airport (TRV) with 24/7 terminal service.',
   },
 ]
 
-function FloatingField({ label, type = 'text', value, onChange, required = true, as = 'input' }) {
-  const [focused, setFocused] = useState(false)
-  const hasValue = value && value.length > 0
-  const Component = as
-
-  return (
-    <div className="relative">
-      <Component
-        type={as === 'input' ? type : undefined}
-        value={value}
-        onChange={onChange}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        required={required}
-        rows={as === 'textarea' ? 5 : undefined}
-        className={`peer w-full px-4 pt-5 pb-2 rounded-xl border text-sm text-gray-900 bg-white transition-colors focus:outline-none resize-none ${
-          focused ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-gray-200'
-        }`}
-      />
-      <label
-        className={`absolute left-4 transition-all pointer-events-none text-gray-400 ${
-          focused || hasValue ? 'top-2 text-xs font-medium text-blue-600' : 'top-1/2 -translate-y-1/2 text-sm'
-        }`}
-      >
-        {label}
-      </label>
-    </div>
-  )
-}
-
 export default function ContactPage() {
-  const [form, setForm] = useState({ name: '', email: '', phone: '', topic: topics[0], message: '' })
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    topic: topics[0],
+    message: '',
+  })
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [openFaq, setOpenFaq] = useState(0)
 
-  const update = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }))
+  const update = (field) => (e) =>
+    setForm((prev) => ({ ...prev, [field]: e.target.value }))
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -88,90 +103,159 @@ export default function ContactPage() {
     setTimeout(() => {
       setSubmitting(false)
       setSubmitted(true)
-    }, 900)
+    }, 800)
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Page header */}
-      <div className="bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <span className="text-blue-600 text-sm font-semibold tracking-wide uppercase">Get In Touch</span>
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mt-3 mb-3">Contact Zudo Cars</h1>
-          <p className="text-gray-500 max-w-xl">
-            Questions about a booking, our fleet, or a partnership? Our team is here to help — reach out and
-            we'll get back to you quickly.
+    <div className="min-h-screen bg-gray-50 pt-24 lg:pt-28 font-sans">
+      {/* Page Header */}
+      <div className="bg-white border-b border-gray-100 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+              <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+              We're here to help
+            </span>
+          </div>
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight mb-3">
+            Get in Touch with Zudo Cars
+          </h1>
+          <p className="text-gray-500 text-sm sm:text-base max-w-2xl leading-relaxed">
+            Have questions about booking a car, airport pickups, long-term rentals, or need immediate roadside support?
+            Our friendly support team is reachable 24/7.
           </p>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
-        {/* Info cards */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-14">
-          {contactInfo.map(({ icon: Icon, label, value, sub }) => (
-            <div
+      {/* Main Content Area */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+        {/* Quick Contact Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mb-10 sm:mb-14">
+          {contactInfo.map(({ icon: Icon, label, value, sub, href, actionText, color, bg }) => (
+            <a
               key={label}
-              className="bg-white rounded-2xl border border-gray-100 p-6 hover:shadow-lg hover:shadow-gray-200/50 transition-all duration-300"
+              href={href}
+              target={href.startsWith('http') ? '_blank' : undefined}
+              rel={href.startsWith('http') ? 'noopener noreferrer' : undefined}
+              className="group bg-white rounded-2xl border border-gray-200/80 p-5 sm:p-6 shadow-sm hover:shadow-md hover:border-blue-400 transition-all duration-200 flex flex-col justify-between"
             >
-              <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center mb-4">
-                <Icon className="w-5 h-5 text-blue-600" />
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className={`w-11 h-11 rounded-xl ${bg} flex items-center justify-center`}>
+                    <Icon className={`w-5 h-5 ${color}`} />
+                  </div>
+                  <span className="text-[11px] font-semibold text-gray-400 group-hover:text-blue-600 flex items-center gap-1 transition-colors">
+                    {actionText} <ExternalLink className="w-3 h-3" />
+                  </span>
+                </div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">
+                  {label}
+                </p>
+                <p className="text-base font-bold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors">
+                  {value}
+                </p>
+                <p className="text-xs text-gray-500 leading-relaxed">{sub}</p>
               </div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">{label}</p>
-              <p className="text-base font-bold text-gray-900 mb-0.5">{value}</p>
-              <p className="text-sm text-gray-400">{sub}</p>
-            </div>
+            </a>
           ))}
         </div>
 
-        <div className="lg:grid lg:grid-cols-[1fr_420px] lg:gap-10">
-          {/* Left: form */}
-          <div className="bg-white rounded-2xl border border-gray-100 p-6 sm:p-8">
+        {/* 2-Column Split: Form (Left) & Support Sidebar (Right) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Left Column: Contact Form (col-span-7) */}
+          <div className="lg:col-span-7 bg-white rounded-3xl border border-gray-200/80 p-6 sm:p-8 shadow-sm">
             {submitted ? (
-              <div className="flex flex-col items-center justify-center text-center py-16">
-                <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mb-5">
-                  <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+              <div className="flex flex-col items-center justify-center text-center py-16 px-4">
+                <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mb-5 ring-8 ring-emerald-50/50">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-600" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Message sent</h3>
-                <p className="text-gray-500 max-w-sm mb-6">
-                  Thanks for reaching out, {form.name.split(' ')[0] || 'there'}. Our team will get back to you at{' '}
-                  {form.email || 'your email'} shortly.
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Message Sent Successfully!</h3>
+                <p className="text-gray-500 max-w-md mb-8 text-sm leading-relaxed">
+                  Thank you for contacting us, <span className="font-semibold text-gray-800">{form.name.split(' ')[0] || 'there'}</span>.
+                  A customer specialist will review your inquiry regarding <span className="font-medium text-gray-800">"{form.topic}"</span> and get in touch with you shortly at <span className="font-semibold text-gray-800">{form.email || form.phone}</span>.
                 </p>
                 <button
+                  type="button"
                   onClick={() => {
                     setSubmitted(false)
                     setForm({ name: '', email: '', phone: '', topic: topics[0], message: '' })
                   }}
-                  className="text-blue-600 font-semibold text-sm hover:text-blue-700 transition-colors"
+                  className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold transition-all shadow-md shadow-blue-600/20"
                 >
-                  Send another message
+                  Send Another Message
                 </button>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-1">Send us a message</h2>
-                  <p className="text-sm text-gray-400">Fill out the form and we'll be in touch within 24 hours.</p>
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1.5">
+                    Send Us a Message
+                  </h2>
+                  <p className="text-xs sm:text-sm text-gray-500">
+                    Fill in your details below and our team will get back to you with all required assistance.
+                  </p>
                 </div>
 
-                <div className="grid sm:grid-cols-2 gap-5">
-                  <FloatingField label="Full name" value={form.name} onChange={update('name')} />
-                  <FloatingField label="Phone number" type="tel" value={form.phone} onChange={update('phone')} required={false} />
+                {/* Name & Phone */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                      Full Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Rahul Sharma"
+                      value={form.name}
+                      onChange={update('name')}
+                      className="w-full h-11 px-3.5 rounded-xl border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                      Phone Number <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="e.g. +91 81119 46664"
+                      value={form.phone}
+                      onChange={update('phone')}
+                      className="w-full h-11 px-3.5 rounded-xl border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
+                    />
+                  </div>
                 </div>
 
-                <FloatingField label="Email address" type="email" value={form.email} onChange={update('email')} />
-
+                {/* Email */}
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">What's this about?</p>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    Email Address <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="e.g. rahul@example.com"
+                    value={form.email}
+                    onChange={update('email')}
+                    className="w-full h-11 px-3.5 rounded-xl border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
+                  />
+                </div>
+
+                {/* Topic Selector */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-2">
+                    Inquiry Topic
+                  </label>
                   <div className="flex flex-wrap gap-2">
                     {topics.map((t) => (
                       <button
                         type="button"
                         key={t}
                         onClick={() => setForm((prev) => ({ ...prev, topic: t }))}
-                        className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
                           form.topic === t
-                            ? 'bg-blue-600 border-blue-600 text-white'
-                            : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'
+                            ? 'bg-blue-600 border-blue-600 text-white shadow-sm shadow-blue-600/20'
+                            : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'
                         }`}
                       >
                         {t}
@@ -180,19 +264,33 @@ export default function ContactPage() {
                   </div>
                 </div>
 
-                <FloatingField label="Your message" as="textarea" value={form.message} onChange={update('message')} />
+                {/* Message */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    Your Message <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    required
+                    rows={4}
+                    placeholder="Tell us your rental dates, preferred vehicle, pickup location, or any specific requirements..."
+                    value={form.message}
+                    onChange={update('message')}
+                    className="w-full p-3.5 rounded-xl border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all resize-none"
+                  />
+                </div>
 
+                {/* Submit button */}
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 text-white px-7 py-3 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-md shadow-blue-600/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto min-w-[180px] h-12 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 rounded-xl text-sm font-semibold transition-all shadow-md shadow-blue-600/25 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {submitting ? (
-                    'Sending...'
+                    <span>Sending message...</span>
                   ) : (
                     <>
-                      Send Message
-                      <Send className="w-4 h-4" />
+                      <span>Send Message</span>
+                      <Send className="w-4 h-4 ml-1" />
                     </>
                   )}
                 </button>
@@ -200,53 +298,92 @@ export default function ContactPage() {
             )}
           </div>
 
-          {/* Right: map + social + faq */}
-          <div className="mt-10 lg:mt-0 space-y-6">
-            <div className="rounded-2xl border border-gray-100 overflow-hidden h-56 bg-gradient-to-br from-blue-50 to-gray-100 flex flex-col items-center justify-center text-center p-6">
-              <MapPin className="w-8 h-8 text-blue-600 mb-3" />
-              <p className="text-sm font-semibold text-gray-900">Zudo Cars HQ</p>
-              <p className="text-sm text-gray-500">4th Block, Koramangala, Bengaluru</p>
-            </div>
-
-            <div className="bg-white rounded-2xl border border-gray-100 p-6">
-              <p className="text-sm font-bold text-gray-900 mb-4">Prefer to chat?</p>
-              <a
-                href="#"
-                className="flex items-center gap-3 p-3.5 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 transition-colors mb-3"
-              >
-                <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
-                  <MessageCircle className="w-4 h-4 text-emerald-600" />
+          {/* Right Column: Support & FAQs (col-span-5) */}
+          <div className="lg:col-span-5 space-y-6">
+            {/* WhatsApp Fast Support Card */}
+            <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-3xl p-6 sm:p-7 text-white shadow-lg shadow-emerald-700/20">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-md flex items-center justify-center">
+                  <MessageCircle className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-gray-900">WhatsApp Support</p>
-                  <p className="text-xs text-gray-400">Usually replies in minutes</p>
+                  <h3 className="text-base font-bold">Fast WhatsApp Booking</h3>
+                  <p className="text-xs text-emerald-100">Live agents available now</p>
                 </div>
+              </div>
+              <p className="text-xs text-emerald-50 leading-relaxed mb-5">
+                Need an immediate rate estimate or car confirmation in Kochi or Trivandrum? Chat directly with our reservations desk.
+              </p>
+              <a
+                href="https://wa.me/918111946664?text=Hi%20Zudo%20Cars,%20I%20would%20like%20to%20book%20a%20car"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full bg-white hover:bg-emerald-50 text-emerald-800 font-bold text-xs sm:text-sm py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md"
+              >
+                <MessageCircle className="w-4 h-4 text-emerald-600 fill-emerald-600" />
+                Start WhatsApp Chat
               </a>
-              <div className="flex items-center gap-3 pt-2">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Follow</p>
-                <div className="flex items-center gap-2">
-                  {[Globe, Link2, Share2].map((Icon, i) => (
-                    <a
-                      key={i}
-                      href="#"
-                      className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-500 hover:bg-blue-600 hover:text-white transition-colors"
-                    >
-                      <Icon className="w-4 h-4" />
-                    </a>
-                  ))}
+            </div>
+
+            {/* Operating Hubs Card */}
+            <div className="bg-white rounded-3xl border border-gray-200/80 p-6 shadow-sm">
+              <div className="flex items-center gap-2.5 mb-3.5">
+                <MapPin className="w-5 h-5 text-blue-600" />
+                <h3 className="text-base font-bold text-gray-900">Kerala Hub Locations</h3>
+              </div>
+              <div className="space-y-2.5 text-xs text-gray-600">
+                <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-between">
+                  <span className="font-semibold text-gray-800">Cochin International Airport (COK)</span>
+                  <span className="text-[10px] text-blue-600 font-medium bg-blue-50 px-2 py-0.5 rounded">24/7 Hub</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-between">
+                  <span className="font-semibold text-gray-800">Edapally (Near Lulu Mall)</span>
+                  <span className="text-[10px] text-gray-500 font-medium">Pickup & Drop</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-between">
+                  <span className="font-semibold text-gray-800">JLN Stadium Hub (Kaloor)</span>
+                  <span className="text-[10px] text-gray-500 font-medium">Central Yard</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-between">
+                  <span className="font-semibold text-gray-800">Ernakulam Junction (South Station)</span>
+                  <span className="text-[10px] text-gray-500 font-medium">Station Hub</span>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-100 p-6">
-              <p className="text-sm font-bold text-gray-900 mb-4">Quick answers</p>
-              <div className="space-y-4">
-                {faqs.map((f) => (
-                  <div key={f.q} className="pb-4 border-b border-gray-100 last:border-0 last:pb-0">
-                    <p className="text-sm font-semibold text-gray-900 mb-1">{f.q}</p>
-                    <p className="text-sm text-gray-500 leading-relaxed">{f.a}</p>
-                  </div>
-                ))}
+            {/* Frequently Asked Questions */}
+            <div className="bg-white rounded-3xl border border-gray-200/80 p-6 shadow-sm">
+              <h3 className="text-base font-bold text-gray-900 mb-4">
+                Frequently Asked Questions
+              </h3>
+              <div className="space-y-3">
+                {faqs.map((faq, index) => {
+                  const isOpen = openFaq === index
+                  return (
+                    <div
+                      key={faq.q}
+                      className="border border-gray-100 rounded-2xl overflow-hidden transition-colors"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setOpenFaq(isOpen ? -1 : index)}
+                        className="w-full px-4 py-3.5 text-left flex items-center justify-between gap-3 text-xs font-semibold text-gray-800 hover:text-blue-600 transition-colors"
+                      >
+                        <span>{faq.q}</span>
+                        <ChevronDown
+                          className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${
+                            isOpen ? 'rotate-180 text-blue-600' : ''
+                          }`}
+                        />
+                      </button>
+                      {isOpen && (
+                        <div className="px-4 pb-3.5 pt-0 text-xs text-gray-500 leading-relaxed border-t border-gray-50">
+                          {faq.a}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </div>
           </div>
