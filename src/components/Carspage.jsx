@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+﻿import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   Star,
@@ -858,6 +858,8 @@ export default function CarsPage() {
 
   const [selectedBrands, setSelectedBrands] = useState([])
   const [selectedCategories, setSelectedCategories] = useState([])
+  const [selectedFuelTypes, setSelectedFuelTypes] = useState([])
+  const [selectedTransmissions, setSelectedTransmissions] = useState([])
   const [priceRange, setPriceRange] = useState([0, 0])
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState('recommended')
@@ -1056,13 +1058,14 @@ export default function CarsPage() {
   }, [urlSearchParams])
 
   const handleAvailabilitySearch = async (e) => {
-    if (e) e.preventDefault();
-    await fetchAvailableVehicles(searchParams);
-  };
+    if (e) e.preventDefault()
+    await fetchAvailableVehicles(searchParams)
+  }
 
-<<<<<<< HEAD
   const brands = useMemo(() => [...new Set(cars.map((c) => c.brand))].sort(), [cars])
   const categories = useMemo(() => [...new Set(cars.map((c) => c.category))].sort(), [cars])
+  const fuelTypes = useMemo(() => [...new Set(cars.map((c) => c.fuel).filter(Boolean))].sort(), [cars])
+  const transmissions = useMemo(() => [...new Set(cars.map((c) => c.transmission).filter(Boolean))].sort(), [cars])
   const minPrice = useMemo(() => (cars.length ? Math.min(...cars.map((c) => c.price)) : 0), [cars])
   const maxPrice = useMemo(() => (cars.length ? Math.max(...cars.map((c) => c.price)) : 0), [cars])
 
@@ -1081,6 +1084,8 @@ export default function CarsPage() {
   const clearAll = () => {
     setSelectedBrands([])
     setSelectedCategories([])
+    setSelectedFuelTypes([])
+    setSelectedTransmissions([])
     setPriceRange([minPrice, maxPrice])
     setSearch('')
   }
@@ -1088,7 +1093,6 @@ export default function CarsPage() {
   const activeCount =
     selectedBrands.length +
     selectedCategories.length +
-<<<<<<< HEAD
     selectedFuelTypes.length +
     selectedTransmissions.length +
     (priceRange[0] !== minPrice || priceRange[1] !== maxPrice ? 1 : 0)
@@ -1103,12 +1107,17 @@ export default function CarsPage() {
     let result = cars.filter((car) => {
       const matchesBrand = selectedBrands.length === 0 || selectedBrands.includes(car.brand)
       const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(car.category)
+      const matchesFuel = selectedFuelTypes.length === 0 || selectedFuelTypes.includes(car.fuel)
+      const matchesTransmission =
+        selectedTransmissions.length === 0 || selectedTransmissions.includes(car.transmission)
       const matchesPrice = car.price >= priceRange[0] && car.price <= priceRange[1]
       const matchesSearch =
         car.name.toLowerCase().includes(search.toLowerCase()) ||
         car.brand.toLowerCase().includes(search.toLowerCase()) ||
         car.plate.toLowerCase().includes(search.toLowerCase())
-      return matchesBrand && matchesCategory && matchesPrice && matchesSearch
+      return (
+        matchesBrand && matchesCategory && matchesFuel && matchesTransmission && matchesPrice && matchesSearch
+      )
     })
 
     switch (sort) {
@@ -1123,10 +1132,6 @@ export default function CarsPage() {
     }
     return result
   }, [cars, selectedBrands, selectedCategories, selectedFuelTypes, selectedTransmissions, priceRange, search, sort])
-=======
-    return result;
-  }, [cars, selectedBrands, selectedCategories, priceRange, search, sort]);
->>>>>>> ec0be8723162114ede4870f8eb97fb93d56a9f44
 
   return (
     <div className="min-h-screen bg-gray-50 pt-24 lg:pt-28 font-sans">
@@ -1401,7 +1406,6 @@ export default function CarsPage() {
                       </button>
                     </span>
                   ))}
-<<<<<<< HEAD
                   {selectedFuelTypes.map((f) => (
                     <span
                       key={f}
