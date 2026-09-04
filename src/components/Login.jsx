@@ -10,7 +10,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-const APPS_SCRIPT_URL = import.meta.env.VITE_APPS_SCRIPT_URL || "";
+const LOGIN_URL = "https://api.zudocars.com/login/";
 
 const testimonials = [
   {
@@ -74,38 +74,36 @@ export default function Login() {
 
     setLoading(true);
     try {
-      let responseData = { role: "user" };
-      if (APPS_SCRIPT_URL) {
-        const response = await fetch(APPS_SCRIPT_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({
-            action: "login",
-            email: email.trim(),
-            password,
-          }),
-        });
-        if (!response.ok) throw new Error("Unable to reach the login service.");
-        responseData = await response.json();
-        if (responseData.success === false || responseData.error) {
-          throw new Error(
-            responseData.error || "Email or password is incorrect.",
-          );
-        }
+      const response = await fetch(LOGIN_URL, {
+        method: "POST",
+        credentials: "include", // required so Django's session cookie is set/sent
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+        }),
+      });
+
+      const responseData = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          responseData.error || "Email or password is incorrect.",
+        );
       }
 
+      // Backend returns { message, user_id, email } on success — no role/token.
       const storage = rememberMe ? localStorage : sessionStorage;
       storage.setItem(
         "zudo_user",
         JSON.stringify({
-          email: email.trim(),
-          role: responseData.role || "user",
+          userId: responseData.user_id,
+          email: responseData.email || email.trim(),
         }),
       );
       setSuccess(true);
       window.setTimeout(() => {
-        const role = responseData.role || "user";
-        navigate(role === "admin" || role === "staff" ? "/dashboard" : "/");
+        navigate("/dashboard");
       }, 1100);
     } catch (submitError) {
       setError(
