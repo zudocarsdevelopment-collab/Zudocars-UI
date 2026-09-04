@@ -939,23 +939,12 @@ export default function CarsPage() {
   // later" - the user can uncheck it to pick an independent end time.
   const [syncEndTime, setSyncEndTime] = useState(true);
 
-<<<<<<< HEAD
   const [selectedBrands, setSelectedBrands] = useState([])
   const [selectedCategories, setSelectedCategories] = useState([])
-  const [selectedFuelTypes, setSelectedFuelTypes] = useState([])
-  const [selectedTransmissions, setSelectedTransmissions] = useState([])
   const [priceRange, setPriceRange] = useState([0, 0])
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState('recommended')
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
-=======
-  const [selectedBrands, setSelectedBrands] = useState([]);
-  const [selectedCategories, setSelectedCategories] = useState([]);
-  const [priceRange, setPriceRange] = useState([0, 0]);
-  const [search, setSearch] = useState("");
-  const [sort, setSort] = useState("recommended");
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
->>>>>>> ec0be8723162114ede4870f8eb97fb93d56a9f44
 
   useEffect(() => {
     let isMounted = true;
@@ -1182,37 +1171,10 @@ export default function CarsPage() {
     await fetchAvailableVehicles(searchParams);
   };
 
-<<<<<<< HEAD
   const brands = useMemo(() => [...new Set(cars.map((c) => c.brand))].sort(), [cars])
   const categories = useMemo(() => [...new Set(cars.map((c) => c.category))].sort(), [cars])
-  const fuelTypes = useMemo(
-    () => [...new Set(cars.map((c) => c.fuel).filter((f) => f && f !== '—'))].sort(),
-    [cars]
-  )
-  const transmissions = useMemo(
-    () => [...new Set(cars.map((c) => c.transmission).filter((t) => t && t !== '—'))].sort(),
-    [cars]
-  )
   const minPrice = useMemo(() => (cars.length ? Math.min(...cars.map((c) => c.price)) : 0), [cars])
   const maxPrice = useMemo(() => (cars.length ? Math.max(...cars.map((c) => c.price)) : 0), [cars])
-=======
-  const brands = useMemo(
-    () => [...new Set(cars.map((c) => c.brand))].sort(),
-    [cars],
-  );
-  const categories = useMemo(
-    () => [...new Set(cars.map((c) => c.category))].sort(),
-    [cars],
-  );
-  const minPrice = useMemo(
-    () => (cars.length ? Math.min(...cars.map((c) => c.price)) : 0),
-    [cars],
-  );
-  const maxPrice = useMemo(
-    () => (cars.length ? Math.max(...cars.map((c) => c.price)) : 0),
-    [cars],
-  );
->>>>>>> ec0be8723162114ede4870f8eb97fb93d56a9f44
 
   const toggleBrand = (brand) =>
     setSelectedBrands((prev) =>
@@ -1231,32 +1193,16 @@ export default function CarsPage() {
     setSelectedTransmissions((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]))
 
   const clearAll = () => {
-<<<<<<< HEAD
     setSelectedBrands([])
     setSelectedCategories([])
-    setSelectedFuelTypes([])
-    setSelectedTransmissions([])
     setPriceRange([minPrice, maxPrice])
     setSearch('')
   }
-=======
-    setSelectedBrands([]);
-    setSelectedCategories([]);
-    setPriceRange([minPrice, maxPrice]);
-    setSearch("");
-  };
->>>>>>> ec0be8723162114ede4870f8eb97fb93d56a9f44
 
   const activeCount =
     selectedBrands.length +
     selectedCategories.length +
-<<<<<<< HEAD
-    selectedFuelTypes.length +
-    selectedTransmissions.length +
     (priceRange[0] !== minPrice || priceRange[1] !== maxPrice ? 1 : 0)
-=======
-    (priceRange[0] !== minPrice || priceRange[1] !== maxPrice ? 1 : 0);
->>>>>>> ec0be8723162114ede4870f8eb97fb93d56a9f44
 
   const sortOptions = [
     { label: "Recommended", value: "recommended" },
@@ -1266,41 +1212,15 @@ export default function CarsPage() {
 
   const filteredCars = useMemo(() => {
     let result = cars.filter((car) => {
-<<<<<<< HEAD
       const matchesBrand = selectedBrands.length === 0 || selectedBrands.includes(car.brand)
       const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(car.category)
-      const matchesFuel = selectedFuelTypes.length === 0 || selectedFuelTypes.includes(car.fuel)
-      const matchesTransmission =
-        selectedTransmissions.length === 0 || selectedTransmissions.includes(car.transmission)
       const matchesPrice = car.price >= priceRange[0] && car.price <= priceRange[1]
       const matchesSearch =
         car.name.toLowerCase().includes(search.toLowerCase()) ||
         car.brand.toLowerCase().includes(search.toLowerCase()) ||
         car.plate.toLowerCase().includes(search.toLowerCase())
-      return (
-        matchesBrand &&
-        matchesCategory &&
-        matchesFuel &&
-        matchesTransmission &&
-        matchesPrice &&
-        matchesSearch
-      )
+      return matchesBrand && matchesCategory && matchesPrice && matchesSearch
     })
-=======
-      const matchesBrand =
-        selectedBrands.length === 0 || selectedBrands.includes(car.brand);
-      const matchesCategory =
-        selectedCategories.length === 0 ||
-        selectedCategories.includes(car.category);
-      const matchesPrice =
-        car.price >= priceRange[0] && car.price <= priceRange[1];
-      const matchesSearch =
-        car.name.toLowerCase().includes(search.toLowerCase()) ||
-        car.brand.toLowerCase().includes(search.toLowerCase()) ||
-        car.plate.toLowerCase().includes(search.toLowerCase());
-      return matchesBrand && matchesCategory && matchesPrice && matchesSearch;
-    });
->>>>>>> ec0be8723162114ede4870f8eb97fb93d56a9f44
 
     switch (sort) {
       case "price-asc":
@@ -1312,13 +1232,8 @@ export default function CarsPage() {
       default:
         break;
     }
-<<<<<<< HEAD
     return result
-  }, [cars, selectedBrands, selectedCategories, selectedFuelTypes, selectedTransmissions, priceRange, search, sort])
-=======
-    return result;
-  }, [cars, selectedBrands, selectedCategories, priceRange, search, sort]);
->>>>>>> ec0be8723162114ede4870f8eb97fb93d56a9f44
+  }, [cars, selectedBrands, selectedCategories, priceRange, search, sort])
 
   return (
     <div className="min-h-screen bg-gray-50 pt-24 lg:pt-28 font-sans">
@@ -1592,34 +1507,7 @@ export default function CarsPage() {
                       </button>
                     </span>
                   ))}
-<<<<<<< HEAD
-                  {selectedFuelTypes.map((f) => (
-                    <span
-                      key={f}
-                      className="flex items-center gap-1.5 bg-blue-50 text-blue-700 text-xs font-semibold pl-3 pr-2 py-1.5 rounded-full"
-                    >
-                      {f}
-                      <button onClick={() => toggleFuelType(f)}>
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
-                  {selectedTransmissions.map((t) => (
-                    <span
-                      key={t}
-                      className="flex items-center gap-1.5 bg-blue-50 text-blue-700 text-xs font-semibold pl-3 pr-2 py-1.5 rounded-full"
-                    >
-                      {t}
-                      <button onClick={() => toggleTransmission(t)}>
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
                   {(priceRange[0] !== minPrice || priceRange[1] !== maxPrice) && (
-=======
-                  {(priceRange[0] !== minPrice ||
-                    priceRange[1] !== maxPrice) && (
->>>>>>> ec0be8723162114ede4870f8eb97fb93d56a9f44
                     <span className="flex items-center gap-1.5 bg-blue-50 text-blue-700 text-xs font-semibold pl-3 pr-2 py-1.5 rounded-full">
                       {formatINR(priceRange[0])} - {formatINR(priceRange[1])}
                       <button
