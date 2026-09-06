@@ -10,7 +10,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-const LOGIN_URL = "https://api.zudocars.com/login/";
+const LOGIN_URL = "https://api.zudocars.com/api/login/";
 
 const testimonials = [
   {
@@ -88,16 +88,17 @@ export default function Login() {
 
       if (!response.ok) {
         throw new Error(
-          responseData.error || "Email or password is incorrect.",
+          responseData.error ||
+            responseData.message ||
+            "Email or password is incorrect.",
         );
       }
 
-      // Backend returns { message, user_id, email } on success — no role/token.
+      // Backend returns { message, email } on success — no user_id/role/token.
       const storage = rememberMe ? localStorage : sessionStorage;
       storage.setItem(
         "zudo_user",
         JSON.stringify({
-          userId: responseData.user_id,
           email: responseData.email || email.trim(),
         }),
       );
@@ -142,7 +143,7 @@ export default function Login() {
               className="animate-[lg-float_0.45s_ease-out]"
             >
               <p className="max-w-lg text-lg font-medium leading-relaxed text-white/90">
-                “{testimonials[testimonialIndex].quote}”
+                "{testimonials[testimonialIndex].quote}"
               </p>
               <p className="mt-4 text-sm font-semibold text-teal-300">
                 {testimonials[testimonialIndex].name}
