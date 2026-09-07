@@ -1,3 +1,6 @@
+import { useState } from "react";
+import TermsModal from "./TermsModal";
+
 const footerLinks = [
   {
     title: "Company",
@@ -9,11 +12,13 @@ const footerLinks = [
   },
   {
     title: "Legal",
-    links: ["Terms of Service", "Privacy Policy", "Cancellation Policy", "Insurance"]
+    links: ["Terms and Conditions", "Privacy Policy", "Cancellation Policy", "Insurance"]
   }
 ]
 
 export default function Footer() {
+  const [isTermsOpen, setIsTermsOpen] = useState(false);
+
   return (
     <footer id="contact" className="bg-gray-900 text-gray-400 py-12 border-t border-gray-800 font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -41,13 +46,30 @@ export default function Footer() {
                 {section.title}
               </h4>
               <ul className="space-y-2.5">
-                {section.links.map((link) => (
-                  <li key={link}>
-                    <a href="#" className="text-sm hover:text-white transition-colors">
-                      {link}
-                    </a>
-                  </li>
-                ))}
+                {section.links.map((link) => {
+                  const isTerms =
+                    link === "Terms and Conditions" ||
+                    link === "Terms & Conditions" ||
+                    link === "Terms of Service";
+
+                  return (
+                    <li key={link}>
+                      {isTerms ? (
+                        <button
+                          type="button"
+                          onClick={() => setIsTermsOpen(true)}
+                          className="text-sm hover:text-white transition-colors text-left cursor-pointer"
+                        >
+                          {link}
+                        </button>
+                      ) : (
+                        <a href="#" className="text-sm hover:text-white transition-colors">
+                          {link}
+                        </a>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}
@@ -66,6 +88,12 @@ export default function Footer() {
         </div>
 
       </div>
+
+      {/* Terms and Conditions Modal */}
+      <TermsModal
+        isOpen={isTermsOpen}
+        onClose={() => setIsTermsOpen(false)}
+      />
     </footer>
   )
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { X, MapPin, User, Phone, CheckCircle2, ChevronLeft, ShieldCheck, Navigation } from 'lucide-react'
+import TermsModal from './TermsModal'
 
 const formatINR = (num) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(num)
@@ -44,6 +45,8 @@ async function fetchDeliveryDistance(address) {
 export default function BookingModal({ car, slot, onClose }) {
   const [step, setStep] = useState(0)
   const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false)
   const [errors, setErrors] = useState({})
   const addressInputRef = useRef(null)
 
@@ -208,7 +211,13 @@ export default function BookingModal({ car, slot, onClose }) {
               )}
               {step === 1 && <RenterDetailsStep form={form} update={update} errors={errors} />}
               {step === 2 && (
-                <DepositTermsStep form={form} update={update} errors={errors} deposit={deposit} />
+                <DepositTermsStep
+                  form={form}
+                  update={update}
+                  errors={errors}
+                  deposit={deposit}
+                  onOpenTerms={() => setIsTermsModalOpen(true)}
+                />
               )}
               {step === 3 && (
                 <ReviewStep car={car} form={form} totalHours={totalHours} rentalCost={rentalCost} estimatedTotal={estimatedTotal} hourlyRate={hourlyRate} deposit={deposit} />
@@ -228,6 +237,11 @@ export default function BookingModal({ car, slot, onClose }) {
           </>
         )}
       </div>
+
+      <TermsModal
+        isOpen={isTermsModalOpen}
+        onClose={() => setIsTermsModalOpen(false)}
+      />
 
       <style>{`
         @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
@@ -342,7 +356,7 @@ function RenterDetailsStep({ form, update, errors }) {
   )
 }
 
-function DepositTermsStep({ form, update, errors, deposit }) {
+function DepositTermsStep({ form, update, errors, deposit, onOpenTerms }) {
   return (
     <div>
       <div className="rounded-2xl border border-gray-100 p-4 mb-5 flex items-start gap-3">
@@ -365,14 +379,28 @@ function DepositTermsStep({ form, update, errors, deposit }) {
         </ul>
       </div>
 
-      <label className="flex items-start gap-2.5 cursor-pointer">
+      <label className="flex items-start gap-2.5 cursor-pointer select-none">
         <input
           type="checkbox"
           checked={form.agreedToTerms}
           onChange={(e) => update('agreedToTerms', e.target.checked)}
-          className="mt-0.5 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500/30"
+          className="mt-0.5 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500/30 cursor-pointer"
         />
-        <span className="text-sm text-gray-700">I have read and agree to the rental terms and conditions.</span>
+        <span className="text-sm text-gray-700 leading-snug">
+          Please accept our{' '}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onOpenTerms();
+            }}
+            className="text-blue-600 font-semibold underline hover:text-blue-800 transition-colors cursor-pointer"
+          >
+            Terms & Conditions
+          </button>{' '}
+          to book a car
+        </span>
       </label>
       {errors.agreedToTerms && <p className="text-xs text-red-500 mt-2">{errors.agreedToTerms}</p>}
     </div>

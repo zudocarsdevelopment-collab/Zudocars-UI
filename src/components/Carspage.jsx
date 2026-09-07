@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   Star,
@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import DateRangePicker, { formatPickerDate } from './DateRangePicker'
 import TimeRangePicker from './TimeRangePicker'
+import TermsModal from './TermsModal'
 
 const API_URL = 'https://api.zudocars.com/api/vehicles/'
 const AVAILABLE_API_URL = 'https://api.zudocars.com/api/vehicles/available/'
@@ -484,6 +485,7 @@ function BookingModal({ car, searchParams, onClose }) {
   const [customerPhone, setCustomerPhone] = useState('')
 
   const [agreeTerms, setAgreeTerms] = useState(false)
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
@@ -502,7 +504,7 @@ function BookingModal({ car, searchParams, onClose }) {
   const totalPayable = baseFare + BASE_TO_DELIVERY_FEE + RETURN_TO_BASE_FEE
   const balanceDueOnPickup = Math.max(totalPayable - ADVANCE_AMOUNT, 0)
 
-  const canGoToStep2 = customerName.trim().length > 1 && customerPhone.trim().length >= 10
+  const canGoToStep2 = customerName.trim().length > 1 && customerPhone.trim().length >= 10 && agreeTerms
 
   async function handleConfirm() {
     setSubmitError(null)
@@ -770,22 +772,6 @@ function BookingModal({ car, searchParams, onClose }) {
                     </div>
                   </div>
 
-                  <div className="text-xs text-gray-500 bg-amber-50 border border-amber-100 rounded-xl p-3.5 space-y-1.5">
-                    <p className="font-semibold text-amber-700">Terms & conditions</p>
-                    <p>Minimum booking duration is 1 day. Returning the car late may attract additional charges — our team will confirm the exact late-return policy for your booking.</p>
-                    <p>The deposit shown above is refunded after the vehicle is returned in its original condition, subject to inspection.</p>
-                  </div>
-
-                  <label className="flex items-start gap-2.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={agreeTerms}
-                      onChange={(e) => setAgreeTerms(e.target.checked)}
-                      className="mt-0.5 w-4 h-4 rounded border-gray-300 text-blue-600"
-                    />
-                    <span className="text-sm text-gray-600">I agree to the terms & conditions above.</span>
-                  </label>
-
                   {submitError && (
                     <p className="text-xs text-red-600 flex items-center gap-1.5">
                       <AlertTriangle className="w-3.5 h-3.5" /> {submitError}
@@ -794,39 +780,71 @@ function BookingModal({ car, searchParams, onClose }) {
                 </div>
               )}
 
-              {/* Nav buttons */}
-              <div className="flex items-center justify-between mt-8 pt-5 border-t border-gray-100">
-                <button
-                  onClick={() => (step === 1 ? onClose() : setStep(step - 1))}
-                  className="flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors"
-                >
-                  <ArrowLeft className="w-4 h-4" /> {step === 1 ? 'Cancel' : 'Back'}
-                </button>
+              {/* Nav buttons & Terms acceptance */}
+              <div className="mt-6 pt-4 border-t border-gray-100 space-y-4">
+                <label className="flex items-center gap-2.5 cursor-pointer select-none text-xs sm:text-sm text-gray-600 hover:text-gray-900 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={agreeTerms}
+                    onChange={(e) => setAgreeTerms(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer flex-shrink-0"
+                  />
+                  <span>
+                    Please accept our{' '}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setIsTermsModalOpen(true);
+                      }}
+                      className="text-blue-600 font-semibold underline underline-offset-2 hover:text-blue-800 transition-colors cursor-pointer"
+                    >
+                      Terms & Conditions
+                    </button>{' '}
+                    to book a car
+                  </span>
+                </label>
 
-                {step < 2 && (
+                <div className="flex items-center justify-between pt-1">
                   <button
-                    onClick={() => setStep(step + 1)}
-                    disabled={!canGoToStep2}
-                    className="flex items-center gap-1.5 bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-40 transition-colors"
+                    onClick={() => (step === 1 ? onClose() : setStep(step - 1))}
+                    className="flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors cursor-pointer"
                   >
-                    Continue <ArrowRight className="w-4 h-4" />
+                    <ArrowLeft className="w-4 h-4" /> {step === 1 ? 'Cancel' : 'Back'}
                   </button>
-                )}
-                {step === 2 && (
-                  <button
-                    onClick={handleConfirm}
-                    disabled={!agreeTerms || submitting}
-                    className="flex items-center gap-1.5 bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-40 transition-colors"
-                  >
-                    {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                    {submitting ? 'Booking…' : 'Book Now'}
-                  </button>
-                )}
+
+                  {step < 2 && (
+                    <button
+                      onClick={() => setStep(step + 1)}
+                      disabled={!canGoToStep2}
+                      className="flex items-center gap-1.5 bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                    >
+                      Continue <ArrowRight className="w-4 h-4" />
+                    </button>
+                  )}
+                  {step === 2 && (
+                    <button
+                      onClick={handleConfirm}
+                      disabled={!agreeTerms || submitting}
+                      className="flex items-center gap-1.5 bg-blue-600 text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer shadow-md shadow-blue-600/20"
+                    >
+                      {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                      {submitting ? 'Booking…' : 'Book Now'}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         )}
       </div>
+
+      {/* Terms & Conditions Modal */}
+      <TermsModal
+        isOpen={isTermsModalOpen}
+        onClose={() => setIsTermsModalOpen(false)}
+      />
     </div>
   )
 }
