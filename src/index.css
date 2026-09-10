@@ -8,10 +8,18 @@
   background-color: #020617;
 }
 
+html,
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+#root {
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 

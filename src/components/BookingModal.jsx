@@ -73,7 +73,7 @@ export default function BookingModal({ car, slot, onClose }) {
   }, [onClose])
 
   const hourlyRate = Number(car?.hourly_rate) || 0
-  const deposit = Number(car?.deposit_amount) || Math.round(hourlyRate * 10)
+  const deposit = Number(car?.deposit_amount) || (Number(car?.seats) >= 7 ? 10000 : 5000)
 
   const totalHours = useMemo(() => {
     if (!slot) return 0
@@ -362,20 +362,21 @@ function DepositTermsStep({ form, update, errors, deposit, onOpenTerms }) {
       <div className="rounded-2xl border border-gray-100 p-4 mb-5 flex items-start gap-3">
         <ShieldCheck className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-semibold text-gray-900">Refundable deposit</p>
-          <p className="text-sm text-gray-500 mb-1">Held at pickup, refunded after a clean return.</p>
+          <p className="text-sm font-semibold text-gray-900">Refundable security deposit</p>
+          <p className="text-sm text-gray-500 mb-1">Refunded on the 3rd working day after return following standard inspection.</p>
           <p className="text-xl font-bold text-gray-900">{formatINR(deposit)}</p>
         </div>
       </div>
 
       <div className="rounded-2xl bg-gray-50 p-4 mb-4 max-h-48 overflow-y-auto text-sm text-gray-600 space-y-2">
-        <p>By booking, you agree to:</p>
+        <p className="font-semibold text-gray-800">By booking, you agree to our Self-Drive Terms:</p>
         <ul className="list-disc pl-5 space-y-1">
-          <li>Return the vehicle to the agreed location by the booked return time.</li>
-          <li>A late return is charged at the vehicle's hourly rate for every hour past the booked return time.</li>
-          <li>The deposit is refunded after the vehicle is inspected on return, minus any late fees or damage charges.</li>
-          <li>Delivery fees for custom addresses are estimated from distance and confirmed at pickup.</li>
-          <li>A valid driving license must be presented at pickup.</li>
+          <li><strong>Booking confirmation:</strong> Rs. 2,000 advance (transferable within 1 month).</li>
+          <li><strong>Deposit:</strong> Rs. 5,000 (5-seater) / Rs. 10,000 (7-seater), payable at pickup.</li>
+          <li><strong>Timing:</strong> 24 hrs calculated from pickup (8 AM – 8 PM office hours). Late drop: Rs. 300/hr.</li>
+          <li><strong>Documents & Age:</strong> Original Driving Licence (mandatory) + 1 ID proof. Renter must be 23+ yrs and present in person to sign physical handover documents.</li>
+          <li><strong>Fuel & Condition:</strong> Return with same fuel level and in the same condition as received.</li>
+          <li><strong>Fines:</strong> No smoking, pets, alcohol, overspeeding (&gt;80 km/hr), or food waste (deposit withheld on violation).</li>
         </ul>
       </div>
 
@@ -445,7 +446,7 @@ function ReviewStep({ car, form, totalHours, rentalCost, estimatedTotal, hourlyR
         </div>
       </div>
       <p className="text-xs text-gray-400 mt-3">
-        Late returns are charged hourly at {formatINR(hourlyRate)}/hr beyond the booked return time. No payment is taken now — our team will call to verify your booking.
+        Late returns are charged at Rs. 300/hour beyond the booked return time. Pay deposit + total rent at pickup. Our team will call to confirm car availability.
       </p>
     </div>
   )
