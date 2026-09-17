@@ -8,6 +8,8 @@ import {
   Car,
   Check,
   Edit3,
+  ExternalLink,
+  FileText,
   Fuel,
   Gauge,
   Loader2,
@@ -15,6 +17,7 @@ import {
   MapPin,
   Menu,
   Plus,
+  RefreshCw,
   Search,
   ShieldCheck,
   Trash2,
@@ -33,11 +36,18 @@ const HAS_API_URL = APPS_SCRIPT_URL !== "YOUR_APPS_SCRIPT_URL_HERE";
 const VEHICLES_API_URL =
   import.meta.env.VITE_VEHICLES_API_URL ||
   "https://api.zudocars.com/api/vehicles/";
+const ESTIMATES_API_URL = "https://api.zudocars.com/api/estimates/";
 
 const CURRENCY = new Intl.NumberFormat("en-IN", {
   style: "currency",
   currency: "INR",
   maximumFractionDigits: 0,
+});
+const ESTIMATE_CURRENCY = new Intl.NumberFormat("en-IN", {
+  style: "currency",
+  currency: "INR",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
 });
 const formatINR = (value) => CURRENCY.format(Number(value) || 0);
 
@@ -370,6 +380,7 @@ export default function Dashboard() {
   const tabs = [
     { id: "overview", label: "Overview", icon: BarChart3 },
     { id: "fleet", label: "Fleet", icon: Car },
+    { id: "estimates", label: "Estimates", icon: FileText },
     {
       id: "bookings",
       label: "Bookings",
@@ -655,6 +666,7 @@ export default function Dashboard() {
                   action={action}
                 />
               )}
+              {tab === "estimates" && <Estimates />}
               {tab === "bookings" && (
                 <Bookings
                   bookings={bookings}
@@ -1176,6 +1188,231 @@ function Fleet({
     </div>
   );
 }
+function Estimates() {
+  const [estimates, setEstimates] = useState([]);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  async function loadEstimates() {
+    setLoading(true);
+    setError("");
+    try {
+      setEstimates(await fetchAllEstimates());
+    } catch {
+      setEstimates([]);
+      setError("Unable to load estimates. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadEstimates();
+  }, []);
+
+  const statusOptions = useMemo(
+    () => [...new Set(estimates.map((estimate) => estimate.status).filter(Boolean))],
+    [estimates],
+  );
+  const priorityOptions = useMemo(
+    () => [...new Set(estimates.map((estimate) => estimate.priority).filter(Boolean))],
+    [estimates],
+  );
+  const filtered = estimates.filter((estimate) => {
+    const searchable = [
+      estimate.estimate_id,
+      estimate.customer_name,
+      estimate.customer_phone,
+      estimate.vehicle_category,
+      estimate.vehicle_plate,
+      estimate.pickup,
+      estimate.dropoff,
+      estimate.status,
+      estimate.created_by,
+    ]
+      .join(" ")
+      .toLowerCase();
+    return (
+      searchable.includes(query.toLowerCase()) &&
+      (!statusFilter || estimate.status === statusFilter) &&
+      (!priorityFilter || estimate.priority === priorityFilter)
+    );
+  });
+
+  return (
+    <div className="space-y-6">
+      <Toolbar
+        title="Estimates"
+        subtitle="Live estimate records from api.zudocars.com"
+        query={query}
+        setQuery={setQuery}
+      >
+        {statusOptions.length > 0 && (
+          <FilterSelect
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={statusOptions}
+            placeholder="All statuses"
+          />
+        )}
+        {priorityOptions.length > 0 && (
+          <FilterSelect
+            value={priorityFilter}
+            onChange={setPriorityFilter}
+            options={priorityOptions}
+            placeholder="All priorities"
+          />
+        )}
+        <button
+          onClick={loadEstimates}
+          disabled={loading}
+          title="Refresh estimates"
+          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-slate-600 hover:border-teal-600 hover:text-teal-700 disabled:opacity-60"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          Refresh
+        </button>
+      </Toolbar>
+
+      {loading ? (
+        <div className="flex min-h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center gap-3 text-sm font-semibold text-slate-500">
+            <Loader2 className="h-5 w-5 animate-spin text-teal-700" />
+            Loading estimates...
+          </div>
+        </div>
+      ) : error ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
+          <p className="text-sm font-semibold text-red-700">{error}</p>
+          <button
+            onClick={loadEstimates}
+            className="mt-4 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-800"
+          >
+            Retry
+          </button>
+        </div>
+      ) : estimates.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-white py-16 text-center text-sm font-semibold text-slate-400">
+          No estimates found.
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-white py-16 text-center text-sm font-semibold text-slate-400">
+          No estimates match this search or filter.
+        </div>
+      ) : (
+        <>
+          <p className="text-xs font-semibold text-slate-400">
+            Showing {filtered.length} of {estimates.length} estimates
+          </p>
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[1500px] text-left text-sm">
+                <thead className="sticky top-0 z-10 bg-slate-50 text-xs uppercase tracking-wider text-slate-400">
+                  <tr>
+                    {["Estimate ID", "Customer", "Phone", "Vehicle", "Pickup", "Dropoff", "From", "To", "Total", "Status", "Priority", "Payment", "Created by", "Created at", "Actions"].map((heading) => (
+                      <th key={heading} className="whitespace-nowrap px-4 py-4 font-bold">
+                        {heading}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filtered.map((estimate) => (
+                    <tr key={`${estimate.estimate_id}-${estimate.created_at}`} className="align-top hover:bg-slate-50/70">
+                      <td className="whitespace-nowrap px-4 py-4 font-black text-slate-800">{estimate.estimate_id || "—"}</td>
+                      <td className="max-w-40 px-4 py-4 font-semibold" title={estimate.customer_name || "—"}>{estimate.customer_name || "—"}</td>
+                      <td className="whitespace-nowrap px-4 py-4 text-slate-600">{estimate.customer_phone || "—"}</td>
+                      <td className="max-w-44 px-4 py-4 text-slate-600" title={estimate.vehicle_category || "—"}>{estimate.vehicle_category || "—"}<span className="block text-xs text-slate-400">{estimate.vehicle_plate || "No plate"} · {estimate.vehicle_year || "—"}</span></td>
+                      <td className="max-w-40 px-4 py-4 text-slate-600" title={estimate.pickup || "—"}>{estimate.pickup || "—"}</td>
+                      <td className="max-w-40 px-4 py-4 text-slate-600" title={estimate.dropoff || "—"}>{estimate.dropoff || "—"}</td>
+                      <td className="whitespace-nowrap px-4 py-4 text-slate-600">{estimate.date_from || "—"}</td>
+                      <td className="whitespace-nowrap px-4 py-4 text-slate-600">{estimate.date_to || "—"}</td>
+                      <td className="whitespace-nowrap px-4 py-4 font-black text-slate-800">{formatEstimateTotal(estimate.total)}</td>
+                      <td className="px-4 py-4"><StatusPill status={estimate.status || "—"} /></td>
+                      <td className="whitespace-nowrap px-4 py-4 text-slate-600">{estimate.priority || "—"}</td>
+                      <td className="whitespace-nowrap px-4 py-4 text-slate-600">{estimate.payment || "—"}</td>
+                      <td className="max-w-36 px-4 py-4 text-slate-600" title={estimate.created_by || "—"}>{estimate.created_by || "—"}</td>
+                      <td className="whitespace-nowrap px-4 py-4 text-slate-600">{estimate.created_at || "—"}</td>
+                      <td className="px-4 py-4">
+                        <div className="flex min-w-36 flex-col gap-2">
+                          {estimate.open_url && <EstimateLink href={estimate.open_url} label="Open Estimate" />}
+                          {estimate.public_view_url && <EstimateLink href={estimate.public_view_url} label="Public View" />}
+                          {!estimate.open_url && !estimate.public_view_url && <span className="text-xs text-slate-400">—</span>}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+function EstimateLink({ href, label }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      title={label}
+      className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-bold text-teal-700 hover:text-teal-900"
+    >
+      <ExternalLink className="h-3.5 w-3.5" />
+      {label}
+    </a>
+  );
+}
+function extractEstimates(data) {
+  if (Array.isArray(data)) return data;
+  for (const key of ["results", "data", "estimates", "items"]) {
+    if (Array.isArray(data?.[key])) return data[key];
+  }
+  if (data?.data && typeof data.data === "object") return extractEstimates(data.data);
+  return [];
+}
+function extractEstimateNextUrl(data) {
+  const next =
+    data?.next ||
+    data?.links?.next ||
+    data?.pagination?.next ||
+    data?.meta?.next ||
+    data?.data?.next ||
+    data?.data?.links?.next ||
+    data?.data?.pagination?.next;
+  if (!next) return "";
+  if (typeof next === "object") return next.url || next.href || "";
+  return String(next);
+}
+async function fetchAllEstimates() {
+  const estimates = [];
+  const visitedUrls = new Set();
+  let nextUrl = ESTIMATES_API_URL;
+
+  while (nextUrl && !visitedUrls.has(nextUrl)) {
+    visitedUrls.add(nextUrl);
+    const response = await fetch(nextUrl);
+    const data = await readResponse(response);
+    estimates.push(...extractEstimates(data));
+    const next = extractEstimateNextUrl(data);
+    nextUrl = next ? new URL(next, nextUrl).href : "";
+  }
+
+  return estimates;
+}
+function formatEstimateTotal(value) {
+  if (value === null || value === undefined || value === "") return "—";
+  if (typeof value === "number") return ESTIMATE_CURRENCY.format(value);
+  const numericValue = Number(String(value).replace(/[^\d.-]/g, ""));
+  return Number.isNaN(numericValue)
+    ? String(value)
+    : ESTIMATE_CURRENCY.format(numericValue);
+}
 function Bookings({
   bookings,
   staff,
@@ -1392,7 +1629,7 @@ function StatusPill({ status }) {
   };
   return (
     <span
-      className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ${colors[status] || colors.Pending}`}
+      className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ${colors[status] || "bg-slate-100 text-slate-600"}`}
     >
       {status}
     </span>
