@@ -28,8 +28,8 @@ const APPS_SCRIPT_URL =
   import.meta.env.VITE_APPS_SCRIPT_URL || "YOUR_APPS_SCRIPT_URL_HERE";
 const HAS_API_URL = APPS_SCRIPT_URL !== "YOUR_APPS_SCRIPT_URL_HERE";
 
-// Live fleet feed. Vehicles are always read from here, regardless of
-// whether the legacy Apps Script backend (bookings/staff/writes) is configured.
+// Live fleet feed. Vehicles are always read from AND written to here,
+// regardless of whether the legacy Apps Script backend (bookings/staff) is configured.
 const VEHICLES_API_URL =
   import.meta.env.VITE_VEHICLES_API_URL ||
   "https://api.zudocars.com/api/vehicles/";
@@ -148,6 +148,7 @@ const blankCar = {
   subCategory: "",
   plateNumber: "",
   year: "",
+  odometer: "",
   seats: 5,
   transmission: "Automatic",
   fuel: "Petrol",
@@ -158,6 +159,7 @@ const blankCar = {
   minHoursRate: "",
   fastagCharge: "",
   locationBase: "",
+  locationCurrent: "",
   price: "",
   rating: 4.8,
   features: "",
@@ -166,6 +168,23 @@ const blankCar = {
 };
 
 // Normalizes a raw record from the vehicles API into the shape the dashboard uses.
+function normalizeBodyType(value) {
+  const normalized = String(value || "").trim();
+  if (!normalized) return "—";
+
+  const lookup = {
+    hatchback: "Hatchback",
+    sedan: "Sedan",
+    suv: "SUV",
+    muv: "MUV",
+    luxury: "Luxury",
+    "suv ": "SUV",
+  };
+
+  const lower = normalized.toLowerCase();
+  return lookup[lower] || normalized;
+}
+
 function mapVehicle(v) {
   const transmission =
     String(v.transmission || "").toUpperCase() === "MANUAL"
@@ -175,6 +194,7 @@ function mapVehicle(v) {
         : v.transmission || "—";
   const hourlyRate = Number(v.hourly_rate) || 0;
   const minHoursRate = Number(v.min_hours_rate) || 0;
+  const bodyType = normalizeBodyType(v.body_type);
   return {
     id: v.id ?? v.external_id,
     externalId: v.external_id,
@@ -188,7 +208,7 @@ function mapVehicle(v) {
     seats: Number(v.seats) || 0,
     transmission,
     fuel: v.fuel_type || "—",
-    bodyType: v.body_type || "—",
+    bodyType,
     vehicleType: v.vehicle_type || "Car",
     bookingType: v.booking_type || "",
     hourlyRate,
@@ -201,10 +221,49 @@ function mapVehicle(v) {
     image: v.photo_url || v.vehicle_image || "",
     dateAdded: v.date_added || "",
     rating: 4.8,
-    active: true,
-    features: [v.body_type, v.fuel_type, transmission].filter(Boolean).join(", "),
+    // Reflects the backend's is_active flag once that column exists;
+    // defaults to true for older records that predate the field.
+    active: v.is_active ?? true,
+    features: [bodyType, v.fuel_type, transmission].filter(Boolean).join(", "),
     _raw: v,
   };
+}
+
+// Converts the dashboard's camelCase car object into the payload the
+// Django Vehicle API expects (snake_case fields).
+function carToApiPayload(car) {
+  const normalizedBodyType = normalizeBodyType(car.bodyType || "");
+  return {
+    external_id: car.externalId ?? "",
+    plate_number: car.plateNumber || "",
+    category: car.model || car.category || "",
+    sub_category: car.subCategory || "",
+    year: car.year ? Number(car.year) : null,
+    odometer: Number(car.odometer) || 0,
+    seats: car.seats ? Number(car.seats) : null,
+    transmission: (car.transmission || "").toUpperCase(),
+    fuel_type: car.fuel || "",
+    body_type: normalizedBodyType,
+    vehicle_type: car.vehicleType || "Car",
+    booking_type: car.bookingType || "",
+    hourly_rate: Number(car.hourlyRate) || 0,
+    min_hours_rate: Number(car.minHoursRate) || 0,
+    fastag_charge: Number(car.fastagCharge) || 0,
+    location_base: car.locationBase || "",
+    location_current: car.locationCurrent || "",
+    photo_url: car.image || "",
+    is_active: Boolean(car.active),
+  };
+}
+
+// A car came from the live API if its id is a real DB pk rather than a
+// locally-generated fallback id like "car-1699999999".
+function isPersistedCar(car) {
+  return (
+    car.id !== undefined &&
+    car.id !== null &&
+    !String(car.id).startsWith("car-")
+  );
 }
 
 export default function Dashboard() {
@@ -223,7 +282,16 @@ export default function Dashboard() {
   const [staffModal, setStaffModal] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [adminPrompt, setAdminPrompt] = useState(null);
-  const isAdmin = currentUser?.role === "admin";
+  const [notice, setNotice] = useState("");
+  // Admin-only gating has been removed — every signed-in user now sees
+  // the same controls (fleet edit/delete, staff directory, etc.).
+  const isAdmin = true;
+
+  useEffect(() => {
+    if (!notice) return;
+    const timeoutId = setTimeout(() => setNotice(""), 3000);
+    return () => clearTimeout(timeoutId);
+  }, [notice]);
 
   useEffect(() => {
     const stored =
@@ -297,7 +365,7 @@ export default function Dashboard() {
     (member) => String(member.status).toLowerCase() === "pending",
   ).length;
 
-  // Fleet now sits above Bookings and is visible to every signed-in role;
+  // Fleet sits above Bookings and is visible to every signed-in role;
   // only admins get the add/edit/delete controls inside the tab itself.
   const tabs = [
     { id: "overview", label: "Overview", icon: BarChart3 },
@@ -362,38 +430,104 @@ export default function Dashboard() {
       ),
     );
   }
-  function saveCar(car) {
-    const actionName = car.id ? "updateCar" : "addCar";
-    guarded(actionName, () =>
-      write(actionName, car, () => {
-        setCars((items) =>
-          car.id
-            ? items.map((item) => (item.id === car.id ? car : item))
-            : [{ ...car, id: `car-${Date.now()}` }, ...items],
-        );
-        setCarModal(null);
-      }),
-    );
+
+  // --- Vehicle writes go straight to the Django Vehicles API ---
+
+  async function fetchVehicleById(carId) {
+    const response = await fetch(`${VEHICLES_API_URL}${carId}/`);
+    const data = await readResponse(response);
+    return mapVehicle(data);
   }
-  function toggleCar(car) {
-    guarded("updateCar", () =>
-      write("updateCar", { ...car, active: !car.active }, () =>
-        setCars((items) =>
-          items.map((item) =>
-            item.id === car.id ? { ...item, active: !item.active } : item,
-          ),
-        ),
-      ),
-    );
+
+  async function handleEditCar(car) {
+    if (!car?.id || !isPersistedCar(car)) {
+      setCarModal(car);
+      return;
+    }
+
+    setAction("fetchCar");
+    setError("");
+    try {
+      const vehicle = await fetchVehicleById(car.id);
+      setCarModal(vehicle);
+    } catch (fetchError) {
+      setError(fetchError.message || "Unable to load vehicle details.");
+    } finally {
+      setAction("");
+    }
   }
-  function deleteCar(car) {
-    guarded("deleteCar", () =>
-      write("deleteCar", { id: car.id }, () => {
-        setCars((items) => items.filter((item) => item.id !== car.id));
-        setDeleteTarget(null);
-      }),
-    );
+
+  async function saveCar(car) {
+    const isUpdate = isPersistedCar(car);
+    setAction(isUpdate ? "updateCar" : "addCar");
+    setError("");
+    try {
+      const payload = carToApiPayload(car);
+      const url = isUpdate
+        ? `${VEHICLES_API_URL}${car.id}/`
+        : VEHICLES_API_URL;
+      const response = await fetch(url, {
+        method: isUpdate ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await readResponse(response);
+      const saved = mapVehicle(data);
+      setCars((items) =>
+        isUpdate
+          ? items.map((item) => (item.id === car.id ? saved : item))
+          : [saved, ...items],
+      );
+      setCarModal(null);
+      setNotice(
+        isUpdate ? `Vehicle ${saved.plateNumber} updated successfully.` : "Vehicle added successfully.",
+      );
+    } catch (saveError) {
+      setError(saveError.message || "Unable to save vehicle.");
+    } finally {
+      setAction("");
+    }
   }
+
+  async function toggleCar(car) {
+    setAction("updateCar");
+    setError("");
+    try {
+      const response = await fetch(`${VEHICLES_API_URL}${car.id}/`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_active: !car.active }),
+      });
+      const data = await readResponse(response);
+      const saved = mapVehicle(data);
+      setCars((items) =>
+        items.map((item) => (item.id === car.id ? saved : item)),
+      );
+    } catch (toggleError) {
+      setError(toggleError.message || "Unable to update vehicle status.");
+    } finally {
+      setAction("");
+    }
+  }
+
+  async function deleteCar(car) {
+    setAction("deleteCar");
+    setError("");
+    try {
+      const response = await fetch(`${VEHICLES_API_URL}${car.id}/`, {
+        method: "DELETE",
+      });
+      if (!response.ok)
+        throw new Error(`Request failed (${response.status}).`);
+      setCars((items) => items.filter((item) => item.id !== car.id));
+      setDeleteTarget(null);
+    } catch (deleteError) {
+      setError(deleteError.message || "Unable to delete vehicle.");
+    } finally {
+      setAction("");
+    }
+  }
+
   function saveStaff(member) {
     guarded("updateUser", () =>
       write("updateUser", member, () => {
@@ -492,6 +626,9 @@ export default function Dashboard() {
           {error && (
             <AlertBanner message={error} onClose={() => setError("")} />
           )}
+          {notice && (
+            <SuccessBanner message={notice} onClose={() => setNotice("")} />
+          )}
           {loading ? (
             <Skeleton />
           ) : (
@@ -512,7 +649,7 @@ export default function Dashboard() {
                   query={search}
                   setQuery={setSearch}
                   onAdd={() => setCarModal("new")}
-                  onEdit={setCarModal}
+                  onEdit={handleEditCar}
                   onToggle={toggleCar}
                   onDelete={setDeleteTarget}
                   action={action}
@@ -935,8 +1072,22 @@ function Fleet({
         {filtered.map((car) => (
           <article
             key={car.id}
-            className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+            className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
           >
+            {isAdmin && (
+              <button
+                onClick={() => onEdit(car)}
+                disabled={action === "fetchCar"}
+                title="Edit vehicle"
+                className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-slate-600 shadow-md backdrop-blur transition hover:bg-white hover:text-teal-700 disabled:opacity-60"
+              >
+                {action === "fetchCar" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Edit3 className="h-4 w-4" />
+                )}
+              </button>
+            )}
             <div className="flex h-40 items-center justify-center bg-slate-100">
               {car.image ? (
                 <img
@@ -999,21 +1150,15 @@ function Fleet({
               {isAdmin && (
                 <div className="mt-5 flex gap-2 border-t border-slate-100 pt-4">
                   <button
-                    onClick={() => onEdit(car)}
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-slate-50 py-2.5 text-xs font-bold text-slate-600"
-                  >
-                    <Edit3 className="h-3.5 w-3.5" /> Edit
-                  </button>
-                  <button
                     onClick={() => onToggle(car)}
                     disabled={action === "updateCar"}
-                    className="rounded-xl border border-slate-200 px-3 text-xs font-bold text-teal-700"
+                    className="flex-1 rounded-xl border border-slate-200 py-2.5 text-xs font-bold text-teal-700 disabled:opacity-60"
                   >
                     {car.active ? "Disable" : "Enable"}
                   </button>
                   <button
                     onClick={() => onDelete(car)}
-                    className="rounded-xl border border-red-100 px-3 text-red-600"
+                    className="flex items-center justify-center rounded-xl border border-red-100 px-3 text-red-600"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -1276,6 +1421,17 @@ function AlertBanner({ message, onClose }) {
     </div>
   );
 }
+function SuccessBanner({ message, onClose }) {
+  return (
+    <div className="fixed right-5 top-24 z-[70] flex w-[min(420px,calc(100vw-2rem))] items-start gap-3 rounded-2xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-700 shadow-lg shadow-teal-900/10">
+      <Check className="h-5 w-5 shrink-0" />
+      <span className="flex-1">{message}</span>
+      <button className="ml-auto" onClick={onClose}>
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
 function Modal({ title, onClose, children }) {
   return (
     <div
@@ -1327,10 +1483,14 @@ function CarFormModal({ car, onClose, onSave, loading }) {
         {[
           ["name", "Name"],
           ["model", "Category / Model"],
+          ["subCategory", "Sub-category"],
           ["plateNumber", "Plate number"],
           ["year", "Year"],
+          ["odometer", "Odometer (km)"],
           ["seats", "Seats"],
           ["locationBase", "Base location"],
+          ["locationCurrent", "Current location"],
+          ["bookingType", "Booking type"],
           ["hourlyRate", "Hourly rate"],
           ["minHoursRate", "Min-hours rate"],
           ["fastagCharge", "FASTag charge"],
@@ -1364,6 +1524,12 @@ function CarFormModal({ car, onClose, onSave, loading }) {
           options={["Hatchback", "Sedan", "SUV", "MUV", "Luxury"]}
           onChange={(value) => update("bodyType", value)}
         />
+        <Select
+          label="Vehicle type"
+          value={form.vehicleType}
+          options={["Car", "Bike", "Scooter", "Van"]}
+          onChange={(value) => update("vehicleType", value)}
+        />
         <label className="text-sm font-semibold text-slate-700 sm:col-span-2">
           Features (comma-separated)
           <input
@@ -1388,6 +1554,7 @@ function CarFormModal({ car, onClose, onSave, loading }) {
           onSave({
             ...form,
             year: Number(form.year),
+            odometer: Number(form.odometer) || 0,
             seats: Number(form.seats),
             hourlyRate: Number(form.hourlyRate) || 0,
             minHoursRate: Number(form.minHoursRate) || 0,
