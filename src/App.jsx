@@ -13,6 +13,8 @@ import ContactPage from "./components/Contactpage";
 import About from "./components/About";
 import Login from "./components/Login";
 import Dashboard from "./components/Dashboard";
+import Maintenance from "./components/Maintenance";
+import Services from "./components/Services";
 
 function ScrollToHash() {
   const { hash, pathname } = useLocation();
@@ -48,6 +50,14 @@ function AppRoutes() {
 
   if (pathname === "/dashboard") {
     return <Dashboard />;
+  }
+
+  if (pathname === "/dashboard/maintenance") {
+    return <Maintenance />;
+  }
+
+  if (pathname === "/dashboard/services") {
+    return <Services />;
   }
 
   return (

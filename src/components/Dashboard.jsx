@@ -7,6 +7,7 @@ import {
   CalendarDays,
   Car,
   Check,
+  ClipboardList,
   Edit3,
   ExternalLink,
   FileText,
@@ -23,9 +24,14 @@ import {
   Trash2,
   UserRound,
   Users,
+  Wallet,
+  Wrench,
   X,
   XCircle,
 } from "lucide-react";
+import Accounts from "./Accounts";
+import Maintenance from "./Maintenance";
+import ServiceManagement from "./ServiceManagement";
 
 const APPS_SCRIPT_URL =
   import.meta.env.VITE_APPS_SCRIPT_URL || "YOUR_APPS_SCRIPT_URL_HERE";
@@ -380,6 +386,8 @@ export default function Dashboard() {
   const tabs = [
     { id: "overview", label: "Overview", icon: BarChart3 },
     { id: "fleet", label: "Fleet", icon: Car },
+    { id: "maintenance", label: "Maintenance", icon: Wrench },
+    { id: "services", label: "Service Management", icon: ClipboardList },
     { id: "estimates", label: "Estimates", icon: FileText },
     {
       id: "bookings",
@@ -395,6 +403,7 @@ export default function Dashboard() {
             icon: Users,
             badge: pendingStaff,
           },
+          { id: "accounts", label: "Accounts", icon: Wallet },
         ]
       : []),
   ];
@@ -666,6 +675,10 @@ export default function Dashboard() {
                   action={action}
                 />
               )}
+              {tab === "maintenance" && (
+                <Maintenance cars={cars} onServices={() => setTab("services")} />
+              )}
+              {tab === "services" && <ServiceManagement cars={cars} />}
               {tab === "estimates" && <Estimates />}
               {tab === "bookings" && (
                 <Bookings
@@ -689,6 +702,13 @@ export default function Dashboard() {
                   onStatus={updateStaffStatus}
                   onDelete={setDeleteTarget}
                   action={action}
+                />
+              )}
+              {tab === "accounts" && isAdmin && (
+                <Accounts
+                  bookings={bookings}
+                  staff={staff}
+                  onManageStaff={() => setTab("staff")}
                 />
               )}
             </>
@@ -957,7 +977,7 @@ function Overview({ cars, bookings, staff, onBookings, onFleet }) {
     </div>
   );
 }
-function Toolbar({ title, subtitle, query, setQuery, onAdd, addLabel, children }) {
+export function Toolbar({ title, subtitle, query, setQuery, onAdd, addLabel, children }) {
   return (
     <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
       <div>
@@ -989,7 +1009,7 @@ function Toolbar({ title, subtitle, query, setQuery, onAdd, addLabel, children }
     </div>
   );
 }
-function FilterSelect({ value, onChange, options, placeholder }) {
+export function FilterSelect({ value, onChange, options, placeholder }) {
   return (
     <select
       value={value}
@@ -1619,7 +1639,7 @@ function Staff({ staff, query, setQuery, onEdit, onStatus, onDelete, action }) {
     </div>
   );
 }
-function StatusPill({ status }) {
+export function StatusPill({ status }) {
   const colors = {
     Pending: "bg-amber-50 text-amber-700",
     Approved: "bg-teal-50 text-teal-700",
