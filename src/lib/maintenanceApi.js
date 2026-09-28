@@ -112,6 +112,31 @@ export async function fetchServiceRecords(serviceTypeNames) {
   return rows.map((r) => mapServiceRecord(r, serviceTypeNames));
 }
 
+async function postJson(url, payload) {
+  const response = await fetch(url, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(
+      data.detail || data.error || data.message || JSON.stringify(data) ||
+        `Request failed (${response.status})`,
+    );
+  }
+  return data;
+}
+
+export function createMaintenanceSchedule(payload) {
+  return postJson(MAINTENANCE_SCHEDULES_API_URL, payload);
+}
+
+export function createServiceRecord(payload) {
+  return postJson(SERVICE_RECORDS_API_URL, payload);
+}
+
 // Loads all three collections together, building the service-type
 // id→name lookup first so FK-as-PK responses can still show a name.
 export async function loadMaintenanceData() {

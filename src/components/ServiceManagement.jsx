@@ -6,6 +6,7 @@ import {
   ExternalLink,
   History,
   Loader2,
+  Plus,
   RefreshCw,
   Search,
 } from "lucide-react";
@@ -13,8 +14,12 @@ import { FilterSelect, Toolbar } from "./Dashboard";
 import {
   SCHEDULE_STATUS_COLORS,
   SCHEDULE_STATUS_LABELS,
+  createMaintenanceSchedule,
+  createServiceRecord,
   formatMaintenanceINR,
-  loadMaintenanceData,
+  fetchMaintenanceSchedules,
+  fetchServiceRecords,
+  fetchServiceTypes,
 } from "../lib/maintenanceApi";
 
 // Service Queue reads MaintenanceSchedule, Service History reads
@@ -38,6 +43,240 @@ function EmptyState({ icon: Icon, title, hint }) {
       </span>
       <p className="mt-3 text-sm font-bold text-slate-500">{title}</p>
       {hint && <p className="mt-1 max-w-xs text-xs text-slate-400">{hint}</p>}
+    </div>
+  );
+}
+
+function LoadError({ message, onRetry }) {
+  return (
+    <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
+      <p className="text-sm font-semibold text-red-700">{message}</p>
+      <button
+        onClick={onRetry}
+        className="mt-4 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-800"
+      >
+        Retry
+      </button>
+    </div>
+  );
+}
+
+function localDateValue() {
+  const date = new Date();
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().slice(0, 10);
+}
+
+function MaintenanceEntryModal({ mode, cars, serviceTypes, onClose, onSave }) {
+  const isSchedule = mode === "schedule";
+  const [form, setForm] = useState({
+    car: cars[0]?.id ?? "",
+    serviceType: serviceTypes[0]?.id ?? "",
+    dueDate: localDateValue(),
+    dueOdometer: "",
+    status: "scheduled",
+    serviceDate: localDateValue(),
+    odometerReading: "",
+    serviceCenter: "",
+    description: "",
+    partsCost: "0",
+    laborCost: "0",
+    nextServiceDate: "",
+    nextServiceOdometer: "",
+    notes: "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  function update(field, value) {
+    setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setError("");
+    setSaving(true);
+    const relatedFields = {
+      car: Number(form.car),
+      service_type: Number(form.serviceType),
+    };
+    const payload = isSchedule
+      ? {
+          ...relatedFields,
+          due_date: form.dueDate,
+          due_odometer: Number(form.dueOdometer),
+          status: form.status,
+          notes: form.notes,
+        }
+      : {
+          ...relatedFields,
+          service_date: form.serviceDate,
+          odometer_reading: Number(form.odometerReading),
+          service_center: form.serviceCenter.trim(),
+          description: form.description.trim(),
+          parts_cost: Number(form.partsCost) || 0,
+          labor_cost: Number(form.laborCost) || 0,
+          total_cost: (Number(form.partsCost) || 0) + (Number(form.laborCost) || 0),
+          next_service_date: form.nextServiceDate || null,
+          next_service_odometer: form.nextServiceOdometer
+            ? Number(form.nextServiceOdometer)
+            : null,
+          notes: form.notes,
+        };
+
+    try {
+      await onSave(mode, payload);
+      onClose();
+    } catch (saveError) {
+      setError(saveError.message || "Unable to save. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const inputClass =
+    "mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-teal-700 focus:ring-2 focus:ring-teal-700/10";
+  const fields = isSchedule
+    ? [
+        { key: "dueDate", label: "Due date", type: "date", required: true },
+        { key: "dueOdometer", label: "Due odometer (km)", type: "number", required: true, min: 0 },
+      ]
+    : [
+        { key: "serviceDate", label: "Service date", type: "date", required: true },
+        { key: "odometerReading", label: "Odometer reading (km)", type: "number", required: true, min: 0 },
+        { key: "serviceCenter", label: "Service centre", type: "text", required: true, wide: true },
+        { key: "partsCost", label: "Parts cost (INR)", type: "number", min: 0, step: "0.01" },
+        { key: "laborCost", label: "Labour cost (INR)", type: "number", min: 0, step: "0.01" },
+        { key: "nextServiceDate", label: "Next service date", type: "date" },
+        { key: "nextServiceOdometer", label: "Next service odometer (km)", type: "number", min: 0 },
+        { key: "description", label: "Description", type: "text", wide: true },
+      ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/50 p-4">
+      <form
+        onSubmit={handleSubmit}
+        className="my-auto w-full max-w-2xl rounded-2xl bg-white shadow-2xl"
+      >
+        <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
+          <div>
+            <h2 className="text-lg font-black text-slate-900">
+              {isSchedule ? "Add service schedule" : "Log completed service"}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              {isSchedule
+                ? "Create a maintenance item in the service queue."
+                : "Add a completed visit to service history."}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close dialog"
+            className="rounded-lg px-2 py-1 text-xl leading-none text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="grid max-h-[70vh] gap-4 overflow-y-auto px-6 py-5 sm:grid-cols-2">
+          <label className="text-xs font-bold text-slate-600">
+            Vehicle
+            <select
+              required
+              value={form.car}
+              onChange={(event) => update("car", event.target.value)}
+              className={inputClass}
+            >
+              <option value="" disabled>Select vehicle</option>
+              {cars.map((car) => (
+                <option key={car.id} value={car.id}>
+                  {car.model || car.name} · {car.plateNumber}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-xs font-bold text-slate-600">
+            Service type
+            <select
+              required
+              value={form.serviceType}
+              onChange={(event) => update("serviceType", event.target.value)}
+              className={inputClass}
+            >
+              <option value="" disabled>Select service type</option>
+              {serviceTypes.map((type) => (
+                <option key={type.id} value={type.id}>{type.name}</option>
+              ))}
+            </select>
+          </label>
+
+          {isSchedule && (
+            <label className="text-xs font-bold text-slate-600">
+              Status
+              <select
+                value={form.status}
+                onChange={(event) => update("status", event.target.value)}
+                className={inputClass}
+              >
+                {Object.entries(SCHEDULE_STATUS_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          {fields.map(({ key, label, type, required, min, step, wide }) => (
+            <label key={key} className={`text-xs font-bold text-slate-600 ${wide ? "sm:col-span-2" : ""}`}>
+              {label}
+              <input
+                required={required}
+                type={type}
+                min={min}
+                step={step}
+                value={form[key]}
+                onChange={(event) => update(key, event.target.value)}
+                className={inputClass}
+              />
+            </label>
+          ))}
+
+          <label className="text-xs font-bold text-slate-600 sm:col-span-2">
+            Notes
+            <textarea
+              rows={3}
+              value={form.notes}
+              onChange={(event) => update("notes", event.target.value)}
+              className={inputClass}
+            />
+          </label>
+
+          {(cars.length === 0 || serviceTypes.length === 0) && (
+            <p className="text-xs font-medium text-amber-700 sm:col-span-2">
+              Add at least one vehicle and service type before creating a record.
+            </p>
+          )}
+          {error && <p role="alert" className="text-sm font-medium text-red-700 sm:col-span-2">{error}</p>}
+        </div>
+
+        <div className="flex justify-end gap-2 border-t border-slate-100 px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={saving || cars.length === 0 || serviceTypes.length === 0}
+            className="inline-flex items-center gap-2 rounded-lg bg-teal-800 px-4 py-2.5 text-sm font-bold text-white hover:bg-teal-900 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+            {isSchedule ? "Add to queue" : "Save service"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
@@ -383,22 +622,53 @@ export default function ServiceManagement({ cars = [] }) {
   const [schedules, setSchedules] = useState([]);
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [recordError, setRecordError] = useState("");
+  const [scheduleError, setScheduleError] = useState("");
+  const [serviceTypes, setServiceTypes] = useState([]);
+  const [entryMode, setEntryMode] = useState("");
 
   async function load() {
     setLoading(true);
-    setError("");
+    setRecordError("");
+    setScheduleError("");
+    let serviceTypeNames = new Map();
     try {
-      const { schedules: s, records: r } = await loadMaintenanceData();
-      setSchedules(s);
-      setRecords(r);
+      const serviceTypes = await fetchServiceTypes();
+      setServiceTypes(serviceTypes);
+      serviceTypeNames = new Map(serviceTypes.map((type) => [type.id, type.name]));
     } catch {
-      setSchedules([]);
-      setRecords([]);
-      setError("Unable to load maintenance data. Please try again.");
-    } finally {
-      setLoading(false);
+      setServiceTypes([]);
+      // Service records still load when the optional service-type lookup is unavailable.
     }
+
+    const [scheduleResult, recordResult] = await Promise.allSettled([
+      fetchMaintenanceSchedules(serviceTypeNames),
+      fetchServiceRecords(serviceTypeNames),
+    ]);
+
+    if (scheduleResult.status === "fulfilled") {
+      setSchedules(scheduleResult.value);
+    } else {
+      setSchedules([]);
+      setScheduleError("Unable to load service schedules. Please try again.");
+    }
+
+    if (recordResult.status === "fulfilled") {
+      setRecords(recordResult.value);
+    } else {
+      setRecords([]);
+      setRecordError("Unable to load service records. Please try again.");
+    }
+    setLoading(false);
+  }
+
+  async function saveEntry(mode, payload) {
+    if (mode === "schedule") {
+      await createMaintenanceSchedule(payload);
+    } else {
+      await createServiceRecord(payload);
+    }
+    await load();
   }
 
   useEffect(() => {
@@ -409,14 +679,23 @@ export default function ServiceManagement({ cars = [] }) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <SubNav active={subTab} onSelect={setSubTab} />
-        <button
-          onClick={load}
-          disabled={loading}
-          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-slate-600 hover:border-teal-600 hover:text-teal-700 disabled:opacity-60"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          Refresh
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setEntryMode(subTab === "queue" ? "schedule" : "record")}
+            className="inline-flex items-center gap-2 rounded-xl bg-teal-800 px-3 py-2.5 text-sm font-bold text-white hover:bg-teal-900"
+          >
+            <Plus className="h-4 w-4" />
+            {subTab === "queue" ? "Add schedule" : subTab === "history" ? "Log service" : "Log service"}
+          </button>
+          <button
+            onClick={load}
+            disabled={loading}
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-slate-600 hover:border-teal-600 hover:text-teal-700 disabled:opacity-60"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -426,24 +705,37 @@ export default function ServiceManagement({ cars = [] }) {
             Loading service data...
           </div>
         </div>
-      ) : error ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
-          <p className="text-sm font-semibold text-red-700">{error}</p>
-          <button
-            onClick={load}
-            className="mt-4 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-800"
-          >
-            Retry
-          </button>
-        </div>
       ) : (
         <>
-          {subTab === "queue" && <ServiceQueue cars={cars} schedules={schedules} />}
+          {subTab === "queue" && (scheduleError ? (
+            <LoadError message={scheduleError} onRetry={load} />
+          ) : (
+            <ServiceQueue cars={cars} schedules={schedules} />
+          ))}
           {subTab === "history" && (
-            <ServiceHistory cars={cars} records={records} schedules={schedules} />
+            recordError ? (
+              <LoadError message={recordError} onRetry={load} />
+            ) : (
+              <ServiceHistory cars={cars} records={records} schedules={schedules} />
+            )
           )}
-          {subTab === "centres" && <ServiceCentres records={records} />}
+          {subTab === "centres" && (
+            recordError ? (
+              <LoadError message={recordError} onRetry={load} />
+            ) : (
+              <ServiceCentres records={records} />
+            )
+          )}
         </>
+      )}
+      {entryMode && (
+        <MaintenanceEntryModal
+          mode={entryMode}
+          cars={cars}
+          serviceTypes={serviceTypes}
+          onClose={() => setEntryMode("")}
+          onSave={saveEntry}
+        />
       )}
     </div>
   );
