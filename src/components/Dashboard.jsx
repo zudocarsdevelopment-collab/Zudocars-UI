@@ -388,7 +388,6 @@ export default function Dashboard() {
     { id: "fleet", label: "Fleet", icon: Car },
     { id: "maintenance", label: "Maintenance", icon: Wrench },
     { id: "services", label: "Service Management", icon: ClipboardList },
-    { id: "estimates", label: "Estimates", icon: FileText },
     {
       id: "bookings",
       label: "Bookings",
@@ -679,7 +678,6 @@ export default function Dashboard() {
                 <Maintenance cars={cars} onServices={() => setTab("services")} />
               )}
               {tab === "services" && <ServiceManagement cars={cars} />}
-              {tab === "estimates" && <Estimates />}
               {tab === "bookings" && (
                 <Bookings
                   bookings={bookings}

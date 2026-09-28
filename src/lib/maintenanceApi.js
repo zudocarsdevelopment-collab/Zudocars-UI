@@ -113,10 +113,27 @@ export async function fetchServiceRecords(serviceTypeNames) {
 }
 
 async function postJson(url, payload) {
+  const readCsrfToken = () => {
+    const cookie = document.cookie
+      .split(";")
+      .map((value) => value.trim())
+      .find((value) => value.startsWith("csrftoken="));
+    return cookie ? decodeURIComponent(cookie.slice("csrftoken=".length)) : "";
+  };
+
+  let csrfToken = readCsrfToken();
+  if (!csrfToken) {
+    await fetch(url, { credentials: "include" });
+    csrfToken = readCsrfToken();
+  }
+
   const response = await fetch(url, {
     method: "POST",
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(csrfToken ? { "X-CSRFToken": csrfToken } : {}),
+    },
     body: JSON.stringify(payload),
   });
   const data = await response.json().catch(() => ({}));
