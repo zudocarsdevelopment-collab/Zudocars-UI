@@ -43,6 +43,7 @@ const VEHICLES_API_URL =
   import.meta.env.VITE_VEHICLES_API_URL ||
   "https://api.zudocars.com/api/vehicles/";
 const ESTIMATES_API_URL = "https://api.zudocars.com/api/estimates/";
+const BOOKINGS_API_URL = import.meta.env.VITE_BOOKINGS_API_URL || "https://api.zudocars.com/api/bookings/list/";
 
 const CURRENCY = new Intl.NumberFormat("en-IN", {
   style: "currency",
@@ -340,7 +341,7 @@ export default function Dashboard() {
         const allBookings = listFrom(
           bookingData,
           ["bookings", "data"],
-          fallbackBookings,
+          [],
         );
         setBookings(
           currentUser.role === "staff"
@@ -356,13 +357,7 @@ export default function Dashboard() {
         if (!mounted) return;
         setError(loadError.message || "Unable to load dashboard data.");
         setCars(fallbackCars);
-        setBookings(
-          currentUser.role === "staff"
-            ? fallbackBookings.filter(
-                (booking) => booking.assignedEmail === currentUser.email,
-              )
-            : fallbackBookings,
-        );
+        setBookings([]);
         setStaff(fallbackStaff);
       } finally {
         if (mounted) setLoading(false);
@@ -1515,6 +1510,8 @@ function Bookings({
                   {admin && (
                     <td className="px-5 py-4">
                       <select
+                        disabled={booking.backendRecord}
+                        title={booking.backendRecord ? "Assignment is not available for backend bookings" : undefined}
                         value={booking.assignedEmail || ""}
                         onChange={(event) =>
                           onAssign(booking, event.target.value)
@@ -1533,7 +1530,7 @@ function Bookings({
                     </td>
                   )}
                   <td className="px-5 py-4">
-                    {booking.status === "Pending" && (
+                    {booking.status === "Pending" && !booking.backendRecord && (
                       <div className="flex gap-1">
                         <button
                           onClick={() => onStatus(booking, "Approved")}
@@ -1950,9 +1947,22 @@ async function getFleet() {
   return { cars: list.map(mapVehicle) };
 }
 async function getBookings() {
-  if (!HAS_API_URL) return { bookings: fallbackBookings };
-  const response = await fetch(`${APPS_SCRIPT_URL}?action=getBookings`);
-  return readResponse(response);
+  const response = await fetch(BOOKINGS_API_URL);
+  const data = await readResponse(response);
+  const records = Array.isArray(data) ? data : data.results || data.bookings || [];
+  const statuses = { pending: "Pending", confirmed: "Approved", cancelled: "Rejected", completed: "Completed" };
+  return { bookings: records.map((booking) => ({
+    id: booking.reference,
+    backendRecord: true,
+    customerName: booking.customer_name,
+    phone: booking.customer_phone,
+    vehicle: [booking.cart_vehicle?.name, booking.vehicle_plate_number].filter(Boolean).join(" · "),
+    pickup: `${booking.pickup_custom_payload || `Location ${booking.pickup_location_id}`} · ${new Date(booking.start_datetime).toLocaleString("en-IN")}`,
+    dropoff: `${booking.dropoff_custom_payload || `Location ${booking.dropoff_location_id}`} · ${new Date(booking.end_datetime).toLocaleString("en-IN")}`,
+    amount: booking.total_amount,
+    status: statuses[booking.status] || booking.status,
+    assignedEmail: "",
+  })) };
 }
 async function getStaff() {
   if (!HAS_API_URL) return { users: fallbackStaff };

@@ -534,6 +534,10 @@ function BookingModal({ car, searchParams, onClose }) {
       pickup_location_id: searchParams.pickup_location_id,
       dropoff_location_id: searchParams.dropoff_location_id,
       cart_vehicle: car.id,
+      vehicle_snapshot: { asset_identifier: car.plate, name: car.name },
+      total_amount: totalPayable,
+      pickup_custom_payload: locationName(searchParams.pickup_location_id),
+      dropoff_custom_payload: locationName(searchParams.dropoff_location_id),
       cart_services: '[]',
       cart_km_packages: '[]',
       selected_pricing_label: car.kmLimit ? `Basic · ${car.kmLimit} km` : 'Basic',
@@ -620,6 +624,9 @@ function BookingModal({ car, searchParams, onClose }) {
           <div className="p-10 text-center">
             <CheckCircle2 className="w-14 h-14 text-green-500 mx-auto mb-4" />
             <h3 className="text-xl font-bold text-gray-900 mb-2">Booking request sent</h3>
+            {estimateResult?.booking?.reference && (
+              <p className="text-sm font-semibold text-blue-600 mb-3">Booking reference: {estimateResult.booking.reference}</p>
+            )}
             <p className="text-gray-500 mb-6">
               We've received your request for the {car.name}. Our team will confirm your booking on WhatsApp / call
               shortly. Pay the {formatINR(ADVANCE_AMOUNT)} advance to lock it in.
