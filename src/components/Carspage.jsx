@@ -996,6 +996,20 @@ export default function CarsPage() {
       pickup_location_id: paramsToUse.pickup_location_id,
       dropoff_location_id: paramsToUse.dropoff_location_id,
       vehicle_type: paramsToUse.vehicle_type,
+      cooldown_hours: paramsToUse.cooldown_hours ?? 0,
+      pre_start_cooldown_hours: paramsToUse.pre_start_cooldown_hours ?? 0,
+      include_unavailable: paramsToUse.include_unavailable ?? 1,
+      pickup_custom_payload: paramsToUse.pickup_custom_payload ?? '',
+      dropoff_custom_payload: paramsToUse.dropoff_custom_payload ?? '',
+      body_type: paramsToUse.body_type ?? '',
+      fuel_type: paramsToUse.fuel_type ?? '',
+      seat_type: paramsToUse.seat_type ?? '',
+      transmission_type: paramsToUse.transmission_type ?? '',
+      availability_filter: paramsToUse.availability_filter ?? '',
+      search_query: paramsToUse.search_query ?? '',
+      customer_name: paramsToUse.customer_name ?? '',
+      customer_country_code: paramsToUse.customer_country_code ?? '91',
+      customer_phone: paramsToUse.customer_phone ?? '',
     }
 
     console.log('[CarsPage] fetching available vehicles', payload)
