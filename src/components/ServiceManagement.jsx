@@ -1,3 +1,4 @@
+import { createServiceType, updateMaintenanceSchedule } from "../lib/maintenanceApi";
 import { useEffect, useMemo, useState } from "react";
 import {
   Building2,
@@ -313,7 +314,7 @@ function SubNav({ active, onSelect }) {
   );
 }
 
-function ServiceQueue({ cars, schedules }) {
+function ServiceQueue({ cars, schedules, onStatus }) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
@@ -415,7 +416,9 @@ function ServiceQueue({ cars, schedules }) {
                         {row.dueOdometer ? `${row.dueOdometer.toLocaleString("en-IN")} km` : "—"}
                       </td>
                       <td className="px-4 py-4">
-                        <SchedulePill status={row.status} />
+                        <select aria-label="Schedule status" value={row.status} onChange={(event) => onStatus(row.id, event.target.value)} className="rounded-lg border px-2 py-1">
+                          {Object.entries(SCHEDULE_STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                        </select>
                       </td>
                     </tr>
                   ))}
@@ -680,6 +683,12 @@ export default function ServiceManagement({ cars = [] }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <SubNav active={subTab} onSelect={setSubTab} />
         <div className="flex gap-2">
+          <button className="rounded-xl border border-slate-200 px-3 py-2 text-sm" onClick={async () => {
+            const name = window.prompt('Service type name');
+            if (!name?.trim()) return;
+            try { await createServiceType({ name: name.trim() }); await load(); }
+            catch (error) { setScheduleError(error.message); }
+          }}>Add service type</button>
           <button
             onClick={() => setEntryMode(subTab === "queue" ? "schedule" : "record")}
             className="inline-flex items-center gap-2 rounded-xl bg-teal-800 px-3 py-2.5 text-sm font-bold text-white hover:bg-teal-900"
@@ -710,7 +719,10 @@ export default function ServiceManagement({ cars = [] }) {
           {subTab === "queue" && (scheduleError ? (
             <LoadError message={scheduleError} onRetry={load} />
           ) : (
-            <ServiceQueue cars={cars} schedules={schedules} />
+            <ServiceQueue cars={cars} schedules={schedules} onStatus={async (id, status) => {
+              try { await updateMaintenanceSchedule(id, { status }); await load(); }
+              catch (error) { setScheduleError(error.message); }
+            }} />
           ))}
           {subTab === "history" && (
             recordError ? (

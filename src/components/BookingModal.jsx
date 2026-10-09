@@ -1,3 +1,4 @@
+import { apiUrl } from "../lib/apiConfig";
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { X, MapPin, User, Phone, CheckCircle2, ChevronLeft, ShieldCheck, Navigation } from 'lucide-react'
 import TermsModal from './TermsModal'
@@ -145,10 +146,29 @@ export default function BookingModal({ car, slot, onClose }) {
     return Object.keys(next).length === 0
   }
 
-  function goNext() {
+  async function goNext() {
     if (!validateStep(step)) return
     if (step < STEPS.length - 1) setStep(step + 1)
-    else setSubmitted(true)
+    else {
+      setSubmitting(true)
+      try {
+        const response = await fetch(apiUrl('/api/bookings/'), {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customer_name: form.fullName.trim(), customer_phone: form.phone.trim(),
+            date_from: slot.pickupDate, time_from: slot.pickupTime,
+            date_to: slot.returnDate, time_to: slot.returnTime,
+            pickup_location_id: car.pickup_hub, dropoff_location_id: car.pickup_hub, cart_vehicle: car.id,
+            pickup_custom_payload: form.customAddress || form.deliveryType,
+            notes: form.notes,
+          }),
+        })
+        const data = await response.json()
+        if (!response.ok) throw new Error(data.error || JSON.stringify(data))
+        setSubmitted(true)
+      } catch (error) { setErrors({ submit: error.message }) }
+      finally { setSubmitting(false) }
+    }
   }
 
   function goBack() {
@@ -165,6 +185,7 @@ export default function BookingModal({ car, slot, onClose }) {
       <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]" onClick={onClose} />
 
       <div className="relative w-full sm:max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] flex flex-col animate-[slideUp_0.25s_ease-out] overflow-hidden">
+        {errors.submit && <p role="alert" className="p-4 text-red-600">{errors.submit}</p>}
         <button onClick={onClose} aria-label="Close booking form" className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-white/90 hover:bg-white shadow-md flex items-center justify-center text-gray-500 hover:text-gray-900 transition-colors">
           <X className="w-4 h-4" />
         </button>

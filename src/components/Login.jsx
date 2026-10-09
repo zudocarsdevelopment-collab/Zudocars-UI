@@ -1,3 +1,5 @@
+import ThemeToggle from "./ThemeToggle";
+import { apiUrl } from "../lib/apiConfig";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -10,7 +12,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-const LOGIN_URL = "https://api.zudocars.com/api/login/";
+const LOGIN_URL = apiUrl('/api/login/');
 
 const testimonials = [
   {
@@ -94,12 +96,15 @@ export default function Login() {
         );
       }
 
-      // Backend returns { message, email } on success — no user_id/role/token.
+      // Store the backend-issued dashboard token with the signed-in account.
+      localStorage.removeItem("zudo_user");
+      sessionStorage.removeItem("zudo_user");
       const storage = rememberMe ? localStorage : sessionStorage;
       storage.setItem(
         "zudo_user",
         JSON.stringify({
           email: responseData.email || email.trim(),
+          token: responseData.token,
         }),
       );
       setSuccess(true);
@@ -183,6 +188,7 @@ export default function Login() {
       </section>
 
       <section className="relative flex min-h-screen items-center justify-center overflow-hidden px-5 py-8 sm:px-10">
+        <div className="absolute right-5 top-5 z-20 sm:right-10"><ThemeToggle /></div>
         <div className="absolute -right-28 top-10 h-72 w-72 rounded-full bg-teal-100/70 blur-3xl" />
         <div className="absolute -bottom-28 left-0 h-72 w-72 rounded-full bg-emerald-100/70 blur-3xl" />
         <div className="relative z-10 w-full max-w-md">

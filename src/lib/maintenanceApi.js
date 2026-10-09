@@ -1,3 +1,4 @@
+import { apiUrl, dashboardHeaders } from "./apiConfig";
 // Client for the Maintenance Django app (ServiceType, ServiceRecord,
 // MaintenanceSchedule). Follows the same pattern as the Vehicles/Estimates
 // APIs in Dashboard.jsx: an env override with a default path, confirmed
@@ -8,13 +9,13 @@
 // Override any of them with the matching VITE_* env var if they ever move.
 export const SERVICE_TYPES_API_URL =
   import.meta.env.VITE_SERVICE_TYPES_API_URL ||
-  "https://api.zudocars.com/api/service-types/";
+  apiUrl('/api/service-types/');
 export const SERVICE_RECORDS_API_URL =
   import.meta.env.VITE_SERVICE_RECORDS_API_URL ||
-  "https://api.zudocars.com/api/services/";
+  apiUrl('/api/services/');
 export const MAINTENANCE_SCHEDULES_API_URL =
   import.meta.env.VITE_MAINTENANCE_SCHEDULES_API_URL ||
-  "https://api.zudocars.com/api/schedules/";
+  apiUrl('/api/schedules/');
 
 const API_ORIGIN = (() => {
   try {
@@ -50,7 +51,7 @@ async function readJson(response) {
 }
 
 export async function fetchServiceTypes() {
-  const response = await fetch(SERVICE_TYPES_API_URL);
+  const response = await fetch(SERVICE_TYPES_API_URL, { headers: dashboardHeaders() });
   const rows = await readJson(response);
   return rows.map((t) => ({
     id: t.id,
@@ -75,7 +76,7 @@ export function mapMaintenanceSchedule(s, serviceTypeNames) {
 }
 
 export async function fetchMaintenanceSchedules(serviceTypeNames) {
-  const response = await fetch(MAINTENANCE_SCHEDULES_API_URL);
+  const response = await fetch(MAINTENANCE_SCHEDULES_API_URL, { headers: dashboardHeaders() });
   const rows = await readJson(response);
   return rows.map((s) => mapMaintenanceSchedule(s, serviceTypeNames));
 }
@@ -107,34 +108,14 @@ export function mapServiceRecord(r, serviceTypeNames) {
 }
 
 export async function fetchServiceRecords(serviceTypeNames) {
-  const response = await fetch(SERVICE_RECORDS_API_URL);
+  const response = await fetch(SERVICE_RECORDS_API_URL, { headers: dashboardHeaders() });
   const rows = await readJson(response);
   return rows.map((r) => mapServiceRecord(r, serviceTypeNames));
 }
 
 async function postJson(url, payload) {
-  const readCsrfToken = () => {
-    const cookie = document.cookie
-      .split(";")
-      .map((value) => value.trim())
-      .find((value) => value.startsWith("csrftoken="));
-    return cookie ? decodeURIComponent(cookie.slice("csrftoken=".length)) : "";
-  };
-
-  let csrfToken = readCsrfToken();
-  if (!csrfToken) {
-    await fetch(url, { credentials: "include" });
-    csrfToken = readCsrfToken();
-  }
-
   const response = await fetch(url, {
-    method: "POST",
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(csrfToken ? { "X-CSRFToken": csrfToken } : {}),
-    },
-    body: JSON.stringify(payload),
+    method: 'POST', headers: dashboardHeaders(), body: JSON.stringify(payload),
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -196,4 +177,15 @@ export function isSameMonth(dateString, reference = new Date()) {
     d.getFullYear() === reference.getFullYear() &&
     d.getMonth() === reference.getMonth()
   );
+}
+export function createServiceType(payload) {
+  return postJson(SERVICE_TYPES_API_URL, payload);
+}
+export async function updateMaintenanceSchedule(id, payload) {
+  const response = await fetch(`${MAINTENANCE_SCHEDULES_API_URL}${id}/`, {
+    method: 'PATCH', headers: dashboardHeaders(), body: JSON.stringify(payload),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.detail || JSON.stringify(data));
+  return data;
 }

@@ -1,8 +1,9 @@
+import { apiUrl } from "../lib/apiConfig";
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Star, Users, Fuel, Settings2 } from 'lucide-react'
 
-const AVAILABILITY_URL = 'https://api.zudocars.com/api/vehicles/'
+const AVAILABILITY_URL = apiUrl('/api/vehicles/')
 
 const formatINR = (num) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(num)

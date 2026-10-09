@@ -15,6 +15,7 @@ import Login from "./components/Login";
 import Dashboard from "./components/Dashboard";
 import Maintenance from "./components/Maintenance";
 import Services from "./components/Services";
+import ThemeToggle from "./components/ThemeToggle";
 
 function ScrollToHash() {
   const { hash, pathname } = useLocation();
@@ -53,15 +54,15 @@ function AppRoutes() {
   }
 
   if (pathname === "/dashboard/maintenance") {
-    return <Maintenance />;
+    return <><div className="flex justify-end p-4"><ThemeToggle /></div><Maintenance /></>;
   }
 
   if (pathname === "/dashboard/services") {
-    return <Services />;
+    return <><div className="flex justify-end p-4"><ThemeToggle /></div><Services /></>;
   }
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.16),_transparent_45%),linear-gradient(135deg,_#020617_0%,_#0f172a_100%)]">
+    <div className={`min-h-screen overflow-x-hidden bg-slate-50 dark:bg-slate-950 ${pathname === '/' ? 'home-shell' : pathname === '/cars' ? 'search-shell' : ''}`}>
       <Navbar />
       <ScrollToHash />
       <Routes>

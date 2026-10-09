@@ -1,3 +1,5 @@
+import usePickupHubs from '../lib/usePickupHubs'
+import { useEffect } from 'react'
 import {
   ArrowUpRight,
   MapPin,
@@ -57,15 +59,7 @@ const CONVOY = [
 ];
 
 // Location list mapped directly to API database IDs
-const LOCATIONS = [
-  { id: 6, name: "Ernakulam North" },
-  { id: 4, name: "Kochi Airport (COK)" },
-  { id: 1, name: "Trivandrum Airport (TRV)" },
-  { id: 2, name: "Calicut Airport (CCJ)" },
-  { id: 3, name: "Thrissur Town" },
-  { id: 5, name: "Kottayam Town" },
-  { id: 7, name: "Alleppey Railway Station" },
-];
+
 
 // 24-Hour Time slots mapped for display and API format
 const TIME_SLOTS = [
@@ -115,8 +109,15 @@ export default function Hero() {
   }
 
   // ============ SEARCH FORM STATE ============
-  const [pickupLocationId, setPickupLocationId] = useState(LOCATIONS[0].id);
-  const [dropLocationId, setDropLocationId] = useState(LOCATIONS[1].id);
+  const { hubs: LOCATIONS, error: hubError } = usePickupHubs();
+  const [pickupLocationId, setPickupLocationId] = useState('');
+  const [dropLocationId, setDropLocationId] = useState('');
+  useEffect(() => {
+    if (LOCATIONS.length) {
+      setPickupLocationId(LOCATIONS[0].id);
+      setDropLocationId(LOCATIONS[0].id);
+    }
+  }, [LOCATIONS]);
   const [isDifferentDropoff, setIsDifferentDropoff] = useState(false);
 
   const todayStr = useMemo(() => {
@@ -172,6 +173,7 @@ export default function Hero() {
     setFormError("");
 
     // Payload parameters matching POST/GET to /api/vehicles/available/
+    if (!pickupLocationId || !dropLocationId) { window.alert(hubError || 'No pickup locations are available yet. Please contact our team.'); return; }
     const params = new URLSearchParams({
       date_from: pickupDate,
       time_from: pickupTime,
@@ -361,7 +363,7 @@ export default function Hero() {
               className="text-gray-300 text-lg mb-10 max-w-lg leading-relaxed font-normal"
             >
               Hatchbacks for the city, sedans for the highway, SUVs for the
-              ghats. Fully insured vehicles across all major hubs in Kerala.
+              ghats. Fully insured vehicles across all major locations in Kerala.
             </motion.p>
 
             <motion.div
@@ -438,7 +440,7 @@ export default function Hero() {
                       <label className="block">
                         <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1 flex items-center gap-1.5">
                           <MapPin className="w-3 h-3 text-blue-400" /> Pickup
-                          Hub
+                          Location
                         </span>
                         <select
                           value={pickupLocationId}
@@ -463,7 +465,7 @@ export default function Hero() {
                         <label className="block">
                           <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1 flex items-center gap-1.5">
                             <MapPin className="w-3 h-3 text-cyan-400" />{" "}
-                            Drop-off Hub
+                            Drop-off Location
                           </span>
                           <select
                             value={dropLocationId}
@@ -492,7 +494,7 @@ export default function Hero() {
                       className="text-[10px] font-medium text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1 underline underline-offset-2"
                     >
                       {isDifferentDropoff
-                        ? "Same drop-off hub"
+                        ? "Same drop-off location"
                         : "+ Return to a different location"}
                     </button>
                   </div>

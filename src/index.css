@@ -4,9 +4,34 @@
 
 :root {
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  color: #f8fafc;
-  background-color: #020617;
+  color: #0f172a;
+  background-color: #f8fafc;
 }
+
+:root.dark { color: #e2e8f0; background-color: #020617; }
+
+/* Shared utility palette keeps existing cards, forms and dashboard tables
+   consistent while retaining image overlays and coloured action buttons. */
+.dark :where(.bg-white, .bg-white\/90, .bg-white\/95) { background-color: #0f172a; }
+.dark :where(.bg-gray-50, .bg-slate-50, .bg-\[\#f8fafc\]) { background-color: #020617; }
+.dark :where(.bg-gray-100, .bg-slate-100) { background-color: #1e293b; }
+.dark :where(.text-gray-900, .text-gray-800, .text-slate-900, .text-slate-800) { color: #f1f5f9; }
+.dark :where(.text-gray-700, .text-gray-600, .text-slate-700, .text-slate-600) { color: #cbd5e1; }
+.dark :where(.text-gray-500, .text-slate-500) { color: #94a3b8; }
+.dark :where(.border-gray-100, .border-gray-200, .border-slate-100, .border-slate-200, .border-slate-300) { border-color: #334155; }
+.dark :where(.divide-gray-100, .divide-slate-100, .divide-slate-200) > :not([hidden]) ~ :not([hidden]) { border-color: #334155; }
+.dark :where(.hover\:bg-gray-50, .hover\:bg-slate-50, .hover\:bg-slate-50\/70, .hover\:bg-gray-100, .hover\:bg-slate-100):hover { background-color: #1e293b; }
+.dark :where(input, select, textarea) { background-color: #0f172a; color: #e2e8f0; }
+.dark :where(.bg-teal-50, .bg-teal-100) { background-color: #134e4a; }
+.dark :where(.text-teal-600, .text-teal-700, .text-teal-800) { color: #5eead4; }
+.dark :where(.bg-blue-50, .bg-blue-100) { background-color: #172554; }
+.dark :where(.text-blue-600, .text-blue-700, .text-blue-800) { color: #93c5fd; }
+.dark :where(.bg-red-50, .bg-red-100) { background-color: #450a0a; }
+.dark :where(.text-red-600, .text-red-700) { color: #fca5a5; }
+.dark :where(.bg-amber-50, .bg-amber-100) { background-color: #451a03; }
+.dark :where(.text-amber-600, .text-amber-700) { color: #fcd34d; }
+
+@media print { .theme-toggle { display: none; } }
 
 html,
 body {

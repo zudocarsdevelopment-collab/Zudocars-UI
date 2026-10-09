@@ -1,17 +1,14 @@
-import HeroSection from '../components/HeroSection'
-import CarCategories from '../components/CarCategories'
+import RentalHero from '../components/RentalHero'
+import RentalSections from '../components/RentalSections'
 import FeaturedCars from '../components/FeaturedCars'
-import HowItWorks from '../components/HowItWorks'
-import Testimonials from '../components/Testimonials'
+import './home.css'
 
 export default function HomePage() {
   return (
-    <>
-      <HeroSection />
-      <CarCategories />
+    <main className="rental-home">
+      <RentalHero />
       <FeaturedCars />
-      <HowItWorks />
-      <Testimonials />
-    </>
+      <RentalSections />
+    </main>
   )
 }

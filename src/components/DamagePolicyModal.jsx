@@ -1,3 +1,4 @@
+import "./rental-policy.css";
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -71,7 +72,7 @@ export default function DamagePolicyModal({ isOpen, onClose }) {
 
   const modalContent = (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md transition-opacity duration-200"
+      className="rental-policy-overlay fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md transition-opacity duration-200"
       role="dialog"
       aria-modal="true"
       aria-labelledby="damage-policy-modal-title"
@@ -82,7 +83,7 @@ export default function DamagePolicyModal({ isOpen, onClose }) {
       }}
     >
       <div
-        className="relative w-full max-w-4xl max-h-[92vh] flex flex-col bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden text-slate-100 animate-in fade-in zoom-in-95 duration-200"
+        className="rental-policy-dialog relative w-full max-w-4xl max-h-[92vh] flex flex-col bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden text-slate-100 animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -284,7 +285,7 @@ export default function DamagePolicyModal({ isOpen, onClose }) {
                   href="https://wa.me/918111946664?text=Hi%20Zudo%20Cars,%20I%20have%20an%20inquiry%20regarding%20Damage%20and%20Liability%20policy"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition-colors"
+                  className="rental-policy-primary inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition-colors"
                 >
                   <MessageCircle className="w-3.5 h-3.5" />
                   WhatsApp
@@ -308,7 +309,7 @@ export default function DamagePolicyModal({ isOpen, onClose }) {
           </span>
           <button
             onClick={onClose}
-            className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white text-sm font-semibold shadow-md active:scale-95 transition-all cursor-pointer text-center"
+            className="rental-policy-primary w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white text-sm font-semibold shadow-md active:scale-95 transition-all cursor-pointer text-center"
           >
             I Understand & Acknowledge
           </button>

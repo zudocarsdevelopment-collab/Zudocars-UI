@@ -1,3 +1,6 @@
+import usePickupHubs from '../lib/usePickupHubs'
+import './car-search.css'
+import { apiUrl } from "../lib/apiConfig";
 import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
@@ -23,10 +26,10 @@ import DateRangePicker, { formatPickerDate } from './DateRangePicker'
 import TimeRangePicker from './TimeRangePicker'
 import TermsModal from './TermsModal'
 
-const API_URL = 'https://api.zudocars.com/api/vehicles/'
-const AVAILABLE_API_URL = 'https://api.zudocars.com/api/vehicles/available/'
-const ESTIMATE_API_URL = 'https://api.zudocars.com/api/estimates/create/'
-const PDF_API_URL = 'https://api.zudocars.com/api/estimates/pdf/'
+const API_URL = apiUrl('/api/vehicles/')
+const AVAILABLE_API_URL = apiUrl('/api/vehicles/available/')
+const ESTIMATE_API_URL = apiUrl('/api/bookings/')
+const PDF_API_URL = apiUrl('/api/estimates/pdf/')
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1494905998402-395d579af36f?w=600&h=400&fit=crop'
 
 // TODO: these should come from whichever staff member/branch is actually
@@ -37,16 +40,7 @@ const STAFF_NAME = 'Ani'
 const STAFF_PHONE = '+91 9387005555'
 const STAFF_PHONE_DISPLAY = '93870 05555'
 
-const LOCATIONS = [
-  { id: 6, name: 'Edapally Lulu', type: 'pickup' },
-  { id: 4, name: 'EKM Jn. Rly Stn', type: 'pickup' },
-  { id: 5, name: 'EKM Town Rly Stn', type: 'pickup' },
-  { id: 8, name: 'Fort Kochi', type: 'pickup' },
-  { id: 1, name: 'JLN stadium', type: 'yard' },
-  { id: 2, name: 'Kochi Airport', type: 'pickup' },
-  { id: 3, name: 'KSRTC Ernakulam', type: 'pickup' },
-  { id: 12, name: 'TVM Airport', type: 'pickup' },
-]
+
 
 // --- Delivery / reposition pricing config -----------------------------
 // Doorstep delivery is currently disabled - self pickup only. Left here so
@@ -88,6 +82,7 @@ function normalizeCar(raw) {
     bodyType: raw.body_type || '',
     price: Number(raw.total_incl_tax || raw.hourly_rate || raw.price) || 0,
     deposit: raw.deposit || 0,
+    deliveryAmount: Number(raw.delivery_amount ?? 1200),
     seats: raw.seats || 5,
     fuel: raw.fuel_type || '—',
     kmLimit: raw.km_limit,
@@ -172,9 +167,7 @@ async function extractApiError(res, fallback) {
 // Ops WhatsApp number that should get pinged with every new booking enquiry.
 const BOOKING_ENQUIRY_WHATSAPP_NUMBER = '918589900964'
 
-function locationName(id) {
-  return LOCATIONS.find((l) => l.id === id)?.name || `Location #${id}`
-}
+
 
 function buildBookingEnquiryMessage({ car, searchParams, customerName, customerPhone, estimate, pdfUrl }) {
   const lines = [
@@ -183,16 +176,16 @@ function buildBookingEnquiryMessage({ car, searchParams, customerName, customerP
     `Vehicle: ${car.name} (${car.plate})`,
     `Fuel: ${car.fuel} · Transmission: ${car.transmission}`,
     `Trip: ${searchParams.date_from} ${searchParams.time_from} → ${searchParams.date_to} ${searchParams.time_to}`,
-    `Pickup location: ${locationName(searchParams.pickup_location_id)}`,
-    `Dropoff location: ${locationName(searchParams.dropoff_location_id)}`,
+    `Pickup location: ${(searchParams.pickup_location_name || `Hub #${searchParams.pickup_location_id}`)}`,
+    `Dropoff location: ${(searchParams.dropoff_location_name || `Hub #${searchParams.dropoff_location_id}`)}`,
     '',
     `Customer: ${customerName}`,
     `Phone: +91 ${customerPhone}`,
   ]
-  if (estimate?.estimate_id) {
-    lines.push('', `Estimate ID: ${estimate.estimate_id}`)
+  if (estimate?.reference) {
+    lines.push('', `Booking reference: ${estimate.reference}`)
   }
-  // Prefer the Zudo-branded PDF; fall back to the raw therentos link if PDF
+  // Prefer the Zudo-branded PDF; fall back to the raw booking confirmation if PDF
   // generation failed or hasn't come back yet.
   const linkToShow = pdfUrl || estimate?.public_url
   if (linkToShow) lines.push(`Estimate PDF: ${linkToShow}`)
@@ -205,27 +198,9 @@ function buildWhatsappLink(message) {
 
 // Generates the Zudo-branded PDF for a just-created estimate. Best-effort:
 // if this fails, the booking itself already succeeded, so callers should
-// fall back to the raw therentos link instead of blocking on this.
+// fall back to the raw booking confirmation instead of blocking on this.
 async function generateEstimatePdf({ car, searchParams, customerName, customerPhone, estimateResponse }) {
-  const payload = {
-    customer_name: customerName,
-    customer_phone: customerPhone,
-    customer_country_code: '91',
-    vehicle_name: car.name,
-    transmission: car.transmission,
-    fuel_type: car.fuel,
-    pickup_location_name: locationName(searchParams.pickup_location_id),
-    dropoff_location_name: locationName(searchParams.dropoff_location_id),
-    date_from: searchParams.date_from,
-    time_from: searchParams.time_from,
-    date_to: searchParams.date_to,
-    time_to: searchParams.time_to,
-    extra_km_charge: car.extraKmCharge || 0,
-    staff_name: STAFF_NAME,
-    staff_phone: STAFF_PHONE,
-    staff_phone_display: STAFF_PHONE_DISPLAY,
-    therentos_response: estimateResponse,
-  }
+  const payload = { booking_reference: estimateResponse.reference }
 
   const res = await fetch(PDF_API_URL, {
     method: 'POST',
@@ -280,7 +255,7 @@ function FilterSidebar({
       </div>
 
       <div>
-        <h4 className="text-sm font-semibold text-gray-900 mb-4">Price per hour</h4>
+        <h4 className="text-sm font-semibold text-gray-900 mb-4">Rental price for your dates</h4>
         <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
           <span className="font-medium text-gray-900">{formatINR(priceRange[0])}</span>
           <span className="font-medium text-gray-900">{formatINR(priceRange[1])}</span>
@@ -407,7 +382,7 @@ function FilterSidebar({
 
 function CarCard({ car, onBook }) {
   return (
-    <div className="group bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300">
+    <div className="search-car-card group bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300">
       <div className="relative overflow-hidden">
         <img
           src={car.image}
@@ -493,11 +468,11 @@ function BookingModal({ car, searchParams, onClose }) {
   const [estimateResult, setEstimateResult] = useState(null)
   const [pdfUrl, setPdfUrl] = useState(null)
 
-  const pickupLocationName = locationName(searchParams.pickup_location_id)
+  const pickupLocationName = (searchParams.pickup_location_name || `Hub #${searchParams.pickup_location_id}`)
 
   const ADVANCE_AMOUNT = 2000
-  const BASE_TO_DELIVERY_FEE = 600
-  const RETURN_TO_BASE_FEE = 600
+  const BASE_TO_DELIVERY_FEE = car.deliveryAmount / 2
+  const RETURN_TO_BASE_FEE = car.deliveryAmount / 2
 
   const baseFare = car.price
   const depositAmount = car.deposit || 0
@@ -518,36 +493,14 @@ function BookingModal({ car, searchParams, onClose }) {
 
     setSubmitting(true)
     const payload = {
-      send_whatsapp: 0,
-      customer_name: customerName.trim(),
-      customer_country_code: '91',
-      customer_phone: customerPhone.trim(),
-      estimate_priority: 'medium',
-      booking_source: '',
-      date_from: searchParams.date_from,
-      time_from: searchParams.time_from,
-      date_to: searchParams.date_to,
-      time_to: searchParams.time_to,
-      cooldown_hours: 0.15,
-      pre_start_cooldown_hours: 0.15,
-      vehicle_type: searchParams.vehicle_type,
+      customer_name: customerName.trim(), customer_phone: customerPhone.trim(),
+      date_from: searchParams.date_from, time_from: searchParams.time_from,
+      date_to: searchParams.date_to, time_to: searchParams.time_to,
       pickup_location_id: searchParams.pickup_location_id,
       dropoff_location_id: searchParams.dropoff_location_id,
       cart_vehicle: car.id,
-      vehicle_snapshot: { asset_identifier: car.plate, name: car.name },
-      total_amount: totalPayable,
-      pickup_custom_payload: locationName(searchParams.pickup_location_id),
-      dropoff_custom_payload: locationName(searchParams.dropoff_location_id),
-      cart_services: '[]',
-      cart_km_packages: '[]',
-      selected_pricing_label: car.kmLimit ? `Basic · ${car.kmLimit} km` : 'Basic',
-      // "Base to delivery" / "Return to base" - fixed at ₹500 each for
-      // every booking. (These also happen to sidestep the backend's
-      // ZeroDivisionError that fires when this is sent as exactly 0 - see
-      // earlier notes - but the ₹500 amount itself is the actual pricing
-      // decision, not just a crash workaround.)
-      reposition_to_pickup_incl: 600,
-      reposition_return_incl: 600,
+      pickup_custom_payload: (searchParams.pickup_location_name || `Hub #${searchParams.pickup_location_id}`),
+      dropoff_custom_payload: (searchParams.dropoff_location_name || `Hub #${searchParams.dropoff_location_id}`),
     }
 
     try {
@@ -562,7 +515,7 @@ function BookingModal({ car, searchParams, onClose }) {
 
       // Generate our own branded PDF. Best-effort: the booking already
       // succeeded, so a PDF failure shouldn't block the confirmation - we
-      // just fall back to the therentos link in that case.
+      // just fall back to the booking confirmation in that case.
       let generatedPdfUrl = null
       try {
         generatedPdfUrl = await generateEstimatePdf({
@@ -574,7 +527,7 @@ function BookingModal({ car, searchParams, onClose }) {
         })
         setPdfUrl(generatedPdfUrl)
       } catch (pdfErr) {
-        console.error('PDF generation failed, falling back to therentos link:', pdfErr)
+        console.error('PDF generation failed, booking saved but PDF unavailable:', pdfErr)
       }
 
       const message = buildBookingEnquiryMessage({
@@ -650,6 +603,7 @@ function BookingModal({ car, searchParams, onClose }) {
             </button>
             {estimateResult && (
               <div className="flex items-center justify-center gap-4 mt-5 text-xs">
+                <span>Booking: {estimateResult.reference}</span>
                 {pdfUrl ? (
                   <a
                     href={pdfUrl}
@@ -862,7 +816,9 @@ export default function CarsPage() {
   const [searchLoading, setSearchLoading] = useState(false)
   const [error, setError] = useState(null)
   const [isSearched, setIsSearched] = useState(false)
+  const { hubs: LOCATIONS, error: hubError } = usePickupHubs()
   const [bookingCar, setBookingCar] = useState(null)
+  const [quotedParams, setQuotedParams] = useState(null)
   const [urlSearchParams] = useSearchParams()
 
   const safeDefaultStart = getSafeDefaultStart()
@@ -871,8 +827,8 @@ export default function CarsPage() {
     time_from: safeDefaultStart.time,
     date_to: addDaysToDate(safeDefaultStart.date, 1),
     time_to: safeDefaultStart.time,
-    pickup_location_id: 6,
-    dropoff_location_id: 6,
+    pickup_location_id: '',
+    dropoff_location_id: '',
     vehicle_type: 'car',
   })
 
@@ -889,36 +845,7 @@ export default function CarsPage() {
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState('recommended')
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
-
-  useEffect(() => {
-    let isMounted = true
-
-    async function fetchCars() {
-      try {
-        const res = await fetch(API_URL)
-        if (!res.ok) throw new Error(`Request failed: ${res.status}`)
-        const data = await res.json()
-        if (!isMounted) return
-
-        const normalized = data.map(normalizeCar)
-        setCars(normalized)
-
-        const prices = normalized.map((c) => c.price)
-        const min = prices.length ? Math.min(...prices) : 0
-        const max = prices.length ? Math.max(...prices) : 0
-        setPriceRange([min, max])
-      } catch (err) {
-        if (isMounted) setError(err.message)
-      } finally {
-        if (isMounted) setLoading(false)
-      }
-    }
-
-    fetchCars()
-    return () => {
-      isMounted = false
-    }
-  }, [])
+  const [searchEditorOpen, setSearchEditorOpen] = useState(false)
 
   const handleParamChange = (e) => {
     const { name, value } = e.target
@@ -932,6 +859,8 @@ export default function CarsPage() {
       if (name === 'time_from' && syncEndTime) {
         next.time_to = value
       }
+      next.pickup_location_name = LOCATIONS.find((hub) => hub.id === next.pickup_location_id)?.name || ''
+      next.dropoff_location_name = LOCATIONS.find((hub) => hub.id === next.dropoff_location_id)?.name || ''
       return next
     })
   }
@@ -980,6 +909,7 @@ export default function CarsPage() {
 
   const fetchAvailableVehicles = async (paramsToUse) => {
     setError(null)
+    if (!paramsToUse.pickup_location_id || !paramsToUse.dropoff_location_id) { setError(hubError || 'No pickup locations are available yet. Please contact our team.'); setLoading(false); return }
 
     if (!isStartTimeBookable(paramsToUse.date_from, paramsToUse.time_from)) {
       setError(`Pickup time needs to be at least ${MIN_LEAD_MINUTES} minutes from now. Please choose a later time.`)
@@ -989,27 +919,11 @@ export default function CarsPage() {
     setSearchLoading(true)
 
     const payload = {
-      date_from: paramsToUse.date_from,
-      time_from: paramsToUse.time_from,
-      date_to: paramsToUse.date_to,
-      time_to: paramsToUse.time_to,
+      date_from: paramsToUse.date_from, time_from: paramsToUse.time_from,
+      date_to: paramsToUse.date_to, time_to: paramsToUse.time_to,
       pickup_location_id: paramsToUse.pickup_location_id,
       dropoff_location_id: paramsToUse.dropoff_location_id,
-      vehicle_type: paramsToUse.vehicle_type,
-      cooldown_hours: paramsToUse.cooldown_hours ?? 0,
-      pre_start_cooldown_hours: paramsToUse.pre_start_cooldown_hours ?? 0,
-      include_unavailable: paramsToUse.include_unavailable ?? 1,
-      pickup_custom_payload: paramsToUse.pickup_custom_payload ?? '',
-      dropoff_custom_payload: paramsToUse.dropoff_custom_payload ?? '',
-      body_type: paramsToUse.body_type ?? '',
-      fuel_type: paramsToUse.fuel_type ?? '',
-      seat_type: paramsToUse.seat_type ?? '',
-      transmission_type: paramsToUse.transmission_type ?? '',
-      availability_filter: paramsToUse.availability_filter ?? '',
-      search_query: paramsToUse.search_query ?? '',
-      customer_name: paramsToUse.customer_name ?? '',
-      customer_country_code: paramsToUse.customer_country_code ?? '91',
-      customer_phone: paramsToUse.customer_phone ?? '',
+      vehicle_type: paramsToUse.vehicle_type, include_unavailable: false,
     }
 
     console.log('[CarsPage] fetching available vehicles', payload)
@@ -1047,6 +961,7 @@ export default function CarsPage() {
       const normalized = rawVehicles.map(normalizeCar)
 
       setCars(normalized)
+      setQuotedParams({ ...paramsToUse })
       setIsSearched(true)
 
       const prices = normalized.map((c) => c.price)
@@ -1057,6 +972,7 @@ export default function CarsPage() {
       setError(err.message || 'An unexpected error occurred.')
     } finally {
       setSearchLoading(false)
+      setLoading(false)
     }
   }
 
@@ -1078,7 +994,13 @@ export default function CarsPage() {
       dropoff_location_id > 0 &&
       vehicle_type
 
+    if (!LOCATIONS.length) { setLoading(false); return }
     if (!hasUrlParams) {
+      const first = LOCATIONS[0]
+      const defaults = { ...searchParams, pickup_location_id: first.id, dropoff_location_id: first.id,
+        pickup_location_name: first.name, dropoff_location_name: first.name }
+      setSearchParams(defaults)
+      fetchAvailableVehicles(defaults)
       return
     }
 
@@ -1092,9 +1014,11 @@ export default function CarsPage() {
       vehicle_type,
     }
 
+    parsedParams.pickup_location_name = LOCATIONS.find((hub) => hub.id === pickup_location_id)?.name || ''
+    parsedParams.dropoff_location_name = LOCATIONS.find((hub) => hub.id === dropoff_location_id)?.name || ''
     setSearchParams(parsedParams)
     fetchAvailableVehicles(parsedParams)
-  }, [urlSearchParams])
+  }, [urlSearchParams, LOCATIONS])
 
   const handleAvailabilitySearch = async (e) => {
     if (e) e.preventDefault()
@@ -1173,15 +1097,19 @@ export default function CarsPage() {
   }, [cars, selectedBrands, selectedCategories, selectedFuelTypes, selectedTransmissions, priceRange, search, sort])
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-24 lg:pt-28 font-sans">
-      <div id="cars" className="scroll-mt-28 bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Browse All Cars</h1>
-          <p className="text-gray-500 max-w-xl mb-6">
-            Pick your dates, and we'll show you only the cars that are actually free for that window.
-          </p>
+    <div className="zudo-search-page min-h-screen bg-gray-50 pt-24 lg:pt-28 font-sans">
+      <div id="cars" className="search-trip-header scroll-mt-28">
+        <div className="search-trip-container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h1 className="sr-only">Rent a car in Kerala — search results</h1>
+          <button type="button" className="search-trip-summary" aria-expanded={searchEditorOpen} aria-controls="search-trip-editor" onClick={() => setSearchEditorOpen(!searchEditorOpen)}>
+            <Calendar className="w-5 h-5" />
+            <span><small>{LOCATIONS.find(loc => String(loc.id) === String(searchParams.pickup_location_id))?.name || 'Choose pickup location'}</small><strong>{formatPickerDate(searchParams.date_from) || 'Pickup date'} {searchParams.time_from} — {formatPickerDate(searchParams.date_to) || 'Return date'} {searchParams.time_to}</strong></span>
+            <span className="search-edit-label">{searchEditorOpen ? 'Close' : 'Edit'}</span>
+          </button>
 
           <form
+            id="search-trip-editor"
+            hidden={!searchEditorOpen}
             onSubmit={handleAvailabilitySearch}
             className="bg-gray-50 border border-gray-200 rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm"
           >
@@ -1226,7 +1154,7 @@ export default function CarsPage() {
                   >
                     {LOCATIONS.map((loc) => (
                       <option key={loc.id} value={loc.id}>
-                        P/U: {loc.name}
+                        Pickup: {loc.name}
                       </option>
                     ))}
                   </select>
@@ -1239,7 +1167,7 @@ export default function CarsPage() {
                   >
                     {LOCATIONS.map((loc) => (
                       <option key={loc.id} value={loc.id}>
-                        D/O: {loc.name}
+                        Return: {loc.name}
                       </option>
                     ))}
                   </select>
@@ -1331,7 +1259,7 @@ export default function CarsPage() {
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 rounded-xl transition duration-200 flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 disabled:opacity-50 text-xs sm:text-sm h-[38px] whitespace-nowrap"
                 >
                   <Search className="w-4 h-4 shrink-0" />
-                  <span>{searchLoading ? 'Searching…' : 'Show Available Cars'}</span>
+                  <span>{searchLoading ? 'Searching…' : 'Search cars'}</span>
                 </button>
               </div>
             </div>
@@ -1339,7 +1267,7 @@ export default function CarsPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div className="search-results-container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {(loading || searchLoading) && (
           <div className="text-center text-gray-400 py-24">Loading vehicles…</div>
         )}
@@ -1352,8 +1280,8 @@ export default function CarsPage() {
         )}
 
         {!loading && !searchLoading && !error && (
-          <div className="lg:grid lg:grid-cols-[260px_1fr] lg:gap-10">
-            <aside className="hidden lg:block">
+          <div className="search-results-layout">
+            <aside className="hidden">
               <div className="sticky top-8 bg-white rounded-2xl border border-gray-100 p-6">
                 <FilterSidebar
                   brands={brands}
@@ -1380,21 +1308,22 @@ export default function CarsPage() {
             </aside>
 
             <div>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
+              <div className="search-results-toolbar flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
                 <div className="relative flex-1">
                   <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
+                    aria-label="Search cars"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search by model, brand, or plate..."
+                    placeholder="Search cars"
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 bg-white"
                   />
                 </div>
 
                 <button
                   onClick={() => setMobileFiltersOpen(true)}
-                  className="lg:hidden flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:border-blue-300 hover:text-blue-600 transition-colors bg-white"
+                  className="search-open-filters flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:border-blue-300 hover:text-blue-600 transition-colors bg-white"
                 >
                   <SlidersHorizontal className="w-4 h-4" />
                   Filters
@@ -1407,6 +1336,7 @@ export default function CarsPage() {
 
                 <div className="relative">
                   <select
+                    aria-label="Sort cars"
                     value={sort}
                     onChange={(e) => setSort(e.target.value)}
                     className="appearance-none pl-4 pr-9 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 cursor-pointer bg-white"
@@ -1419,6 +1349,12 @@ export default function CarsPage() {
                   </select>
                   <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
+              </div>
+
+              <div className="search-filter-chips" aria-label="Quick vehicle filters">
+                {categories.map(category => <button key={category} type="button" aria-pressed={selectedCategories.includes(category)} onClick={() => toggleCategory(category)}>{category}</button>)}
+                {fuelTypes.map(fuel => <button key={fuel} type="button" aria-pressed={selectedFuelTypes.includes(fuel)} onClick={() => toggleFuelType(fuel)}>{fuel}</button>)}
+                {transmissions.map(transmission => <button key={transmission} type="button" aria-pressed={selectedTransmissions.includes(transmission)} onClick={() => toggleTransmission(transmission)}>{transmission}</button>)}
               </div>
 
               {activeCount > 0 && (
@@ -1478,15 +1414,22 @@ export default function CarsPage() {
                 </div>
               )}
 
-              <p className="text-sm text-gray-500 mb-5">
+              <p className="search-result-count text-sm text-gray-500 mb-5" aria-live="polite">
                 Showing <span className="font-semibold text-gray-900">{filteredCars.length}</span> of {cars.length} cars
                 {isSearched && <span className="ml-1 text-blue-600 font-medium">(Search Results)</span>}
               </p>
 
               {filteredCars.length > 0 ? (
-                <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div className="search-car-grid grid md:grid-cols-2 gap-4">
                   {filteredCars.map((car) => (
-                    <CarCard key={car.id} car={car} onBook={setBookingCar} />
+                    <CarCard key={car.id} car={car} onBook={(selectedCar) => {
+                      const keys = ['date_from', 'time_from', 'date_to', 'time_to', 'pickup_location_id', 'dropoff_location_id', 'vehicle_type']
+                      if (!quotedParams || keys.some((key) => quotedParams[key] !== searchParams[key])) {
+                        setError('Please check availability again for your updated dates and locations.')
+                        return
+                      }
+                      setBookingCar(selectedCar)
+                    }} />
                   ))}
                 </div>
               ) : (
@@ -1509,12 +1452,12 @@ export default function CarsPage() {
       </div>
 
       {mobileFiltersOpen && !loading && !error && (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div className="search-filters-dialog fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-label="Vehicle filters">
           <div className="absolute inset-0 bg-gray-900/40" onClick={() => setMobileFiltersOpen(false)} />
           <div className="absolute right-0 top-0 h-full w-[85%] max-w-sm bg-white p-6 overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-bold text-gray-900">Filters</h2>
-              <button onClick={() => setMobileFiltersOpen(false)}>
+              <button aria-label="Close filters" onClick={() => setMobileFiltersOpen(false)}>
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>

@@ -1,3 +1,4 @@
+import ThemeToggle from './ThemeToggle'
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Menu, X, Phone } from 'lucide-react'
@@ -8,7 +9,7 @@ const navLinks = [
   { label: 'Cars', href: '/cars' },
   { label: 'Fleet', href: '/#fleet' },
   { label: 'About', href: '/about' },
-  { label: 'Testimonials', href: '/#testimonials' },
+  { label: 'FAQ', href: '/#faq' },
   { label: 'Contact', href: '/contact' },
 ]
 
@@ -33,7 +34,7 @@ export default function Navbar() {
   return (
     <nav
       className={cn(
-        'fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-black border-b',
+        'fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-white dark:bg-black border-b',
         scrolled
           ? 'border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.6)] h-16 lg:h-20'
           : 'border-white/[0.06] h-20 lg:h-24'
@@ -44,7 +45,7 @@ export default function Navbar() {
 
           {/* Logo Brand Frame */}
           <Link to="/" className="flex items-center gap-3 group">
-            <span className="text-2xl md:text-xl font-black text-white tracking-tight transition-colors">
+            <span className="text-2xl md:text-xl font-black text-slate-900 dark:text-white tracking-tight transition-colors">
               Zudo<span className="text-cyan-400 font-medium">cars</span>
             </span>
           </Link>
@@ -60,7 +61,7 @@ export default function Navbar() {
                   key={link.label}
                   to={isRouterLink ? link.href : undefined}
                   href={!isRouterLink ? link.href : undefined}
-                  className="relative px-4 py-2 text-sm font-semibold text-white/90 hover:text-white transition-colors duration-300 group"
+                  className="relative px-4 py-2 text-sm font-semibold text-slate-700 dark:text-white/90 hover:text-slate-900 dark:hover:text-white transition-colors duration-300 group"
                 >
                   {link.label}
                   <span className="absolute bottom-0 left-4 right-4 h-[2px] bg-cyan-400 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-center rounded-full shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
@@ -70,7 +71,8 @@ export default function Navbar() {
           </div>
 
           {/* Desktop Right Actions Utility Deck */}
-          <div className="hidden lg:flex items-center gap-6">
+          <div className="hidden lg:flex items-center gap-4">
+            <ThemeToggle />
             
 
             <Link
@@ -83,6 +85,7 @@ export default function Navbar() {
 
           {/* Mobile Actions */}
           <div className="flex items-center gap-2 lg:hidden">
+            <ThemeToggle />
             <Link
               to="/cars"
               className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-3 py-2 text-sm font-semibold text-white shadow-[0_4px_15px_rgba(37,99,235,0.3)]"
@@ -93,7 +96,7 @@ export default function Navbar() {
             <button
               onClick={() => setOpen(!open)}
               aria-label="Toggle menu"
-              className="p-2.5 rounded-xl bg-white/[0.06] border border-white/[0.1] text-white hover:bg-white/[0.12] transition-all"
+              className="p-2.5 rounded-xl bg-white/[0.06] border border-slate-200 dark:border-white/[0.1] text-slate-900 dark:text-white hover:bg-white/[0.12] transition-all"
             >
               {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -104,7 +107,7 @@ export default function Navbar() {
       {/* Mobile Drawer Slide Panel Overlay */}
       <div
         className={cn(
-          'lg:hidden overflow-hidden transition-all duration-300 bg-black border-b border-white/10',
+          'lg:hidden overflow-hidden transition-all duration-300 bg-white dark:bg-black border-b border-white/10',
           open ? 'max-h-[420px] opacity-100' : 'max-h-0 opacity-0 pointer-events-none'
         )}
       >
@@ -119,7 +122,7 @@ export default function Navbar() {
                 to={isRouterLink ? link.href : undefined}
                 href={!isRouterLink ? link.href : undefined}
                 onClick={() => setOpen(false)}
-                className="block text-lg font-bold px-3 py-3 rounded-xl text-white hover:text-cyan-400 transition-all"
+                className="block text-lg font-bold px-3 py-3 rounded-xl text-slate-900 dark:text-white hover:text-cyan-600 dark:hover:text-cyan-400 transition-all"
               >
                 {link.label}
               </LinkComponent>
