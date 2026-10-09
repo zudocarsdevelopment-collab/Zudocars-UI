@@ -439,7 +439,7 @@ function CarCard({ car, onBook }) {
           </div>
           <button
             onClick={() => onBook(car)}
-            className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-md shadow-blue-600/20"
+            className="bg-[#ff4932] text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#e63823] transition-colors"
           >
             Book Now
           </button>
@@ -788,7 +788,7 @@ function BookingModal({ car, searchParams, onClose }) {
                     <button
                       onClick={handleConfirm}
                       disabled={!agreeTerms || submitting}
-                      className="flex items-center gap-1.5 bg-blue-600 text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer shadow-md shadow-blue-600/20"
+                      className="flex items-center gap-1.5 bg-[#ff4932] text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#e63823] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                     >
                       {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                       {submitting ? 'Booking…' : 'Book Now'}

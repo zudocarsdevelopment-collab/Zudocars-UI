@@ -70,7 +70,7 @@ export default function FleetPage() {
 
         {!loading && !error && cars.length > 0 && (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {cars.map((car) => {
+            {cars.slice(0, 12).map((car) => {
               const badge = getBadge(car)
               const image = car.vehicle_image || car.photo_url || FALLBACK_IMAGE
               const priceValue = Number(car.hourly_rate) || 0
@@ -117,7 +117,7 @@ export default function FleetPage() {
                       </div>
                       <button
                         onClick={() => navigate('/cars')}
-                        className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-md shadow-blue-600/20"
+                        className="bg-[#ff4932] text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#e63823] transition-colors"
                       >
                         Book Now
                       </button>
@@ -126,6 +126,16 @@ export default function FleetPage() {
                 </div>
               )
             })}
+          </div>
+        )}
+        {!loading && !error && cars.length > 12 && (
+          <div className="mt-8 text-center">
+            <button
+              onClick={() => navigate('/cars')}
+              className="bg-[#ff4932] text-white px-6 py-3 rounded-xl text-sm font-semibold hover:bg-[#e63823] transition-colors"
+            >
+              View all cars
+            </button>
           </div>
         )}
       </div>
