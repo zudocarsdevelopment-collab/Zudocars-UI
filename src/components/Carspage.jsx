@@ -81,7 +81,8 @@ function normalizeCar(raw) {
     brand: deriveBrand(raw.name || raw.category),
     category: raw.vehicle_type || raw.body_type || 'Car',
     bodyType: raw.body_type || '',
-    price: Number(raw.total_incl_tax || raw.hourly_rate || raw.price) || 0,
+    price: Number(raw.total_incl_tax ?? raw.daily_price ?? raw.hourly_rate ?? raw.price) || 0,
+    dailyPrice: raw.daily_price == null || raw.daily_price === '' ? null : Number(raw.daily_price),
     deposit: raw.deposit || 0,
     deliveryAmount: Number(raw.delivery_amount ?? 1200),
     seats: raw.seats || 5,
@@ -435,8 +436,11 @@ function CarCard({ car, onBook }) {
             {car.deposit > 0 && (
               <div className="text-xs text-gray-400 mb-0.5">Deposit: {formatINR(car.deposit)}</div>
             )}
-            <span className="text-2xl font-bold text-gray-900">{formatINR(car.price)}</span>
-            <span className="text-sm text-gray-400"> /total</span>
+            <span className="text-2xl font-bold text-gray-900">{formatINR(car.dailyPrice ?? car.price)}</span>
+            <span className="text-sm text-gray-400">{car.dailyPrice != null ? ' /day' : ' /total'}</span>
+            {car.dailyPrice != null && (
+              <div className="text-xs text-gray-500 mt-1">{formatINR(car.price)} rental for your dates</div>
+            )}
           </div>
           <button
             onClick={() => onBook(car)}
@@ -653,6 +657,11 @@ function BookingModal({ car, searchParams, onClose }) {
                   <Settings2 className="w-3.5 h-3.5" /> {car.transmission}
                 </div>
               </div>
+              {car.dailyPrice != null && (
+                <p className="text-lg font-bold text-gray-900 mb-4">
+                  {formatINR(car.dailyPrice)}<span className="text-sm font-normal text-gray-500"> /day</span>
+                </p>
+              )}
               <div className="bg-gray-50 rounded-xl p-4 text-xs text-gray-500 space-y-1.5">
                 <div className="flex items-center gap-1.5 font-semibold text-gray-700">
                   <Calendar className="w-3.5 h-3.5 text-blue-600" /> Trip
@@ -706,7 +715,7 @@ function BookingModal({ car, searchParams, onClose }) {
                 <div className="space-y-5">
                   <div className="bg-gray-50 rounded-xl p-4 space-y-2.5 text-sm">
                     <div className="flex justify-between text-gray-600">
-                      <span>Rental fare</span>
+                      <span>{car.dailyPrice != null ? `Rental fare (${formatINR(car.dailyPrice)}/day)` : 'Rental fare'}</span>
                       <span className="font-medium text-gray-900">{formatINR(baseFare)}</span>
                     </div>
                     <div className="flex justify-between text-gray-600">

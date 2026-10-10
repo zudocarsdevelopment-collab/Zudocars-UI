@@ -74,7 +74,7 @@ export default function FleetPage() {
             {cars.slice(0, 12).map((car) => {
               const badge = getBadge(car)
               const image = vehicleImageUrl(car)
-              const priceValue = Number(car.hourly_rate) || 0
+              const priceValue = Number(car.daily_price ?? car.hourly_rate) || 0
 
               return (
                 <div
@@ -115,7 +115,7 @@ export default function FleetPage() {
                     <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                       <div>
                         <span className="text-2xl font-bold text-gray-900">{formatINR(priceValue)}</span>
-                        <span className="text-sm text-gray-400">/hr</span>
+                        <span className="text-sm text-gray-400">{car.daily_price != null ? '/day' : '/hr'}</span>
                       </div>
                       <button
                         onClick={() => navigate('/cars')}

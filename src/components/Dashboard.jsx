@@ -170,7 +170,8 @@ const blankCar = {
   fuel: "Petrol",
   bodyType: "Hatchback",
   vehicleType: "Car",
-  bookingType: "Hourly (Min)",
+  bookingType: "Daily",
+  dailyPrice: "",
   hourlyRate: "",
   minHoursRate: "",
   fastagCharge: "",
@@ -209,6 +210,7 @@ function mapVehicle(v) {
         ? "Automatic"
         : v.transmission || "—";
   const hourlyRate = Number(v.hourly_rate) || 0;
+  const dailyPrice = v.daily_price == null ? "" : Number(v.daily_price);
   const minHoursRate = Number(v.min_hours_rate) || 0;
   const bodyType = normalizeBodyType(v.body_type);
   return {
@@ -228,10 +230,11 @@ function mapVehicle(v) {
     vehicleType: v.vehicle_type || "Car",
     bookingType: v.booking_type || "",
     hourlyRate,
+    dailyPrice,
     minHoursRate,
     fastagCharge: Number(v.fastag_charge) || 0,
     // Used wherever the UI needs a single headline price.
-    price: minHoursRate || hourlyRate,
+    price: dailyPrice === "" ? minHoursRate || hourlyRate : dailyPrice,
     pickupHub: v.pickup_hub,
     locationBase: v.pickup_hub_name || v.location_base || "—",
     locationCurrent: v.location_current || "",
@@ -264,6 +267,7 @@ function carToApiPayload(car) {
     vehicle_type: car.vehicleType || "Car",
     booking_type: car.bookingType || "",
     hourly_rate: Number(car.hourlyRate) || 0,
+    daily_price: car.dailyPrice === "" || car.dailyPrice == null ? null : Number(car.dailyPrice),
     min_hours_rate: Number(car.minHoursRate) || 0,
     fastag_charge: Number(car.fastagCharge) || 0,
     pickup_hub: car.pickupHub ? Number(car.pickupHub) : null,
@@ -1156,19 +1160,19 @@ function Fleet({
               <div className="mt-5 flex items-end justify-between">
                 <div>
                   <p className="text-xl font-black">
-                    {formatINR(car.minHoursRate || car.price)}
+                    {formatINR(car.dailyPrice === "" || car.dailyPrice == null ? car.minHoursRate || car.price : car.dailyPrice)}
                     <span className="text-xs font-medium text-slate-400">
                       {" "}
-                      min hours
+                      {car.dailyPrice === "" || car.dailyPrice == null ? 'min hours' : '/day'}
                     </span>
                   </p>
-                  {Boolean(car.hourlyRate) && (
+                  {car.dailyPrice == null || car.dailyPrice === "" ? Boolean(car.hourlyRate) && (
                     <p className="text-xs text-slate-400">
                       {formatINR(car.hourlyRate)}/hr
                       {Boolean(car.fastagCharge) &&
                         ` · FASTag ${formatINR(car.fastagCharge)}`}
                     </p>
-                  )}
+                  ) : null}
                 </div>
                 <span className="text-sm font-bold text-amber-500">
                   ★ {car.rating}
@@ -1542,8 +1546,7 @@ function CarFormModal({ car, onClose, onSave, loading }) {
           ["seats", "Seats"],
           ["locationCurrent", "Current location"],
           ["bookingType", "Booking type"],
-          ["hourlyRate", "Hourly rate"],
-          ["minHoursRate", "Min-hours rate"],
+          ["dailyPrice", "Daily price"],
           ["fastagCharge", "FASTag charge"],
           ["rating", "Rating"],
           ["image", "Photo URL"],
@@ -1608,9 +1611,10 @@ function CarFormModal({ car, onClose, onSave, loading }) {
             odometer: Number(form.odometer) || 0,
             seats: Number(form.seats),
             hourlyRate: Number(form.hourlyRate) || 0,
+            dailyPrice: form.dailyPrice === "" || form.dailyPrice == null ? "" : Number(form.dailyPrice),
             minHoursRate: Number(form.minHoursRate) || 0,
             fastagCharge: Number(form.fastagCharge) || 0,
-            price: Number(form.minHoursRate) || Number(form.hourlyRate) || 0,
+            price: Number(form.dailyPrice) || Number(form.minHoursRate) || Number(form.hourlyRate) || 0,
             rating: Number(form.rating),
           })
         }

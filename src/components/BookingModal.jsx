@@ -75,6 +75,7 @@ export default function BookingModal({ car, slot, onClose }) {
   }, [onClose])
 
   const hourlyRate = Number(car?.hourly_rate) || 0
+  const dailyPrice = car?.daily_price == null ? null : Number(car.daily_price)
   const deposit = Number(car?.deposit_amount) || (Number(car?.seats) >= 7 ? 10000 : 5000)
 
   const totalHours = useMemo(() => {
@@ -86,7 +87,9 @@ export default function BookingModal({ car, slot, onClose }) {
     return Math.ceil(diffMs / (1000 * 60 * 60))
   }, [slot])
 
-  const rentalCost = totalHours * hourlyRate
+  const rentalCost = dailyPrice != null
+    ? Math.ceil(totalHours / 24) * dailyPrice
+    : Math.max(totalHours * hourlyRate, Number(car?.min_hours_rate) || 0)
   const estimatedTotal = rentalCost + form.deliveryFee
 
   function update(field, value) {
@@ -241,7 +244,7 @@ export default function BookingModal({ car, slot, onClose }) {
                 />
               )}
               {step === 3 && (
-                <ReviewStep car={car} form={form} totalHours={totalHours} rentalCost={rentalCost} estimatedTotal={estimatedTotal} hourlyRate={hourlyRate} deposit={deposit} />
+                <ReviewStep car={car} form={form} totalHours={totalHours} rentalCost={rentalCost} estimatedTotal={estimatedTotal} hourlyRate={hourlyRate} dailyPrice={dailyPrice} deposit={deposit} />
               )}
             </div>
 
@@ -429,7 +432,7 @@ function DepositTermsStep({ form, update, errors, deposit, onOpenTerms }) {
   )
 }
 
-function ReviewStep({ car, form, totalHours, rentalCost, estimatedTotal, hourlyRate, deposit }) {
+function ReviewStep({ car, form, totalHours, rentalCost, estimatedTotal, hourlyRate, dailyPrice, deposit }) {
   const rows = [
     ['Vehicle', `${car.category} · ${car.plate_number}`],
     ['Delivery to', form.zoneLabel || 'Self pickup — branch'],
@@ -450,7 +453,7 @@ function ReviewStep({ car, form, totalHours, rentalCost, estimatedTotal, hourlyR
 
       <div className="rounded-2xl bg-blue-50 px-4 py-4 space-y-1.5">
         <div className="flex items-center justify-between text-sm text-gray-600">
-          <span>{formatINR(hourlyRate)}/hr × {totalHours} hrs</span>
+          <span>{dailyPrice != null ? `${formatINR(dailyPrice)}/day × ${Math.ceil(totalHours / 24)} days` : `${formatINR(hourlyRate)}/hr × ${totalHours} hrs`}</span>
           <span>{formatINR(rentalCost)}</span>
         </div>
         <div className="flex items-center justify-between text-sm text-gray-600">
