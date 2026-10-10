@@ -87,7 +87,7 @@ export default function TermsModal({ isOpen, onClose, initialSection = "all" }) 
             </div>
             <div className="p-3 rounded-xl bg-slate-800/70 border border-slate-700">
               <span className="text-xs text-slate-400 block mb-0.5">7-Seater</span>
-              <span className="text-base font-bold text-cyan-400">Rs. 10,000</span>
+              <span className="text-base font-bold text-cyan-400">Rs. 5,000</span>
             </div>
           </div>
           <ul className="list-disc pl-5 space-y-2 text-slate-300">
@@ -95,7 +95,7 @@ export default function TermsModal({ isOpen, onClose, initialSection = "all" }) 
               <strong className="text-white">5-seater:</strong> Rs. 5,000
             </li>
             <li>
-              <strong className="text-white">7-seater:</strong> Rs. 10,000
+              <strong className="text-white">7-seater:</strong> Rs. 5,000
             </li>
             <li>
               Pay <em className="text-cyan-300 font-semibold not-italic">deposit + total rent</em> at pickup

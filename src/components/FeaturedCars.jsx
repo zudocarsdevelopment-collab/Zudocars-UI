@@ -119,7 +119,7 @@ export default function FleetPage() {
                       </div>
                       <button
                         onClick={() => navigate('/cars')}
-                        className="bg-[#ff4932] text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#e63823] transition-colors"
+                        className="bg-[#047857] text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#065f46] transition-colors"
                       >
                         Book Now
                       </button>
@@ -134,7 +134,7 @@ export default function FleetPage() {
           <div className="mt-8 text-center">
             <button
               onClick={() => navigate('/cars')}
-              className="bg-[#ff4932] text-white px-6 py-3 rounded-xl text-sm font-semibold hover:bg-[#e63823] transition-colors"
+              className="bg-[#047857] text-white px-6 py-3 rounded-xl text-sm font-semibold hover:bg-[#065f46] transition-colors"
             >
               View all cars
             </button>

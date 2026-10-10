@@ -21,8 +21,8 @@ const contactInfo = [
     sub: 'Available 24/7 for booking support',
     href: 'tel:+918111946664',
     actionText: 'Call now',
-    color: 'text-[#ff4932]',
-    bg: 'bg-[#ff4932]/10',
+    color: 'text-[#047857]',
+    bg: 'bg-[#047857]/10',
   },
   {
     icon: MessageCircle,
@@ -116,7 +116,7 @@ export default function ContactPage() {
         <img className="contact-hero-image" src="https://www.motorbeam.com/wp-content/uploads/2018-Volkswagen-Virtus-Front-And-Side.jpg" alt="Volkswagen Virtus viewed from the front and side" fetchPriority="high" />
         <div className="contact-container">
           <div className="flex items-center gap-2 mb-3">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#ff4932]/10 text-[#ff4932] border border-[#ff4932]/20">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#047857]/10 text-[#047857] border border-[#047857]/20">
               We're here to help
             </span>
           </div>
@@ -147,14 +147,14 @@ export default function ContactPage() {
                   <div className={`w-11 h-11 rounded-xl ${bg} flex items-center justify-center`}>
                     <Icon className={`w-5 h-5 ${color}`} />
                   </div>
-                  <span className="text-[11px] font-semibold text-gray-400 group-hover:text-[#ff4932] flex items-center gap-1 transition-colors">
+                  <span className="text-[11px] font-semibold text-gray-400 group-hover:text-[#047857] flex items-center gap-1 transition-colors">
                     {actionText} <ExternalLink className="w-3 h-3" />
                   </span>
                 </div>
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">
                   {label}
                 </p>
-                <p className="text-base font-bold text-gray-900 mb-1 group-hover:text-[#ff4932] transition-colors">
+                <p className="text-base font-bold text-gray-900 mb-1 group-hover:text-[#047857] transition-colors">
                   {value}
                 </p>
                 <p className="text-xs text-gray-500 leading-relaxed">{sub}</p>
@@ -183,7 +183,7 @@ export default function ContactPage() {
                     setSubmitted(false)
                     setForm({ name: '', email: '', phone: '', topic: topics[0], message: '' })
                   }}
-                  className="px-6 py-2.5 rounded-xl bg-[#ff4932] hover:bg-[#e63823] text-white text-xs sm:text-sm font-semibold transition-all shadow-md shadow-none"
+                  className="px-6 py-2.5 rounded-xl bg-[#047857] hover:bg-[#065f46] text-white text-xs sm:text-sm font-semibold transition-all shadow-md shadow-none"
                 >
                   Send Another Message
                 </button>
@@ -211,7 +211,7 @@ export default function ContactPage() {
                       placeholder="e.g. Rahul Sharma"
                       value={form.name}
                       onChange={update('name')}
-                      className="w-full h-11 px-3.5 rounded-xl border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#ff4932]/20 focus:border-[#ff4932] transition-all"
+                      className="w-full h-11 px-3.5 rounded-xl border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#047857]/20 focus:border-[#047857] transition-all"
                     />
                   </div>
                   <div>
@@ -224,7 +224,7 @@ export default function ContactPage() {
                       placeholder="e.g. +91 81119 46664"
                       value={form.phone}
                       onChange={update('phone')}
-                      className="w-full h-11 px-3.5 rounded-xl border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#ff4932]/20 focus:border-[#ff4932] transition-all"
+                      className="w-full h-11 px-3.5 rounded-xl border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#047857]/20 focus:border-[#047857] transition-all"
                     />
                   </div>
                 </div>
@@ -240,7 +240,7 @@ export default function ContactPage() {
                     placeholder="e.g. rahul@example.com"
                     value={form.email}
                     onChange={update('email')}
-                    className="w-full h-11 px-3.5 rounded-xl border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#ff4932]/20 focus:border-[#ff4932] transition-all"
+                    className="w-full h-11 px-3.5 rounded-xl border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#047857]/20 focus:border-[#047857] transition-all"
                   />
                 </div>
 
@@ -257,8 +257,8 @@ export default function ContactPage() {
                         onClick={() => setForm((prev) => ({ ...prev, topic: t }))}
                         className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
                           form.topic === t
-                            ? 'bg-[#ff4932] border-[#ff4932] text-white shadow-sm shadow-none'
-                            : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-[#ff4932] hover:text-[#ff4932]'
+                            ? 'bg-[#047857] border-[#047857] text-white shadow-sm shadow-none'
+                            : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-[#047857] hover:text-[#047857]'
                         }`}
                       >
                         {t}
@@ -278,7 +278,7 @@ export default function ContactPage() {
                     placeholder="Tell us your rental dates, preferred vehicle, pickup location, or any specific requirements..."
                     value={form.message}
                     onChange={update('message')}
-                    className="w-full p-3.5 rounded-xl border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#ff4932]/20 focus:border-[#ff4932] transition-all resize-none"
+                    className="w-full p-3.5 rounded-xl border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#047857]/20 focus:border-[#047857] transition-all resize-none"
                   />
                 </div>
 
@@ -286,7 +286,7 @@ export default function ContactPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full sm:w-auto min-w-[180px] h-12 flex items-center justify-center gap-2 bg-[#ff4932] hover:bg-[#e63823] text-white px-8 rounded-xl text-sm font-semibold transition-all shadow-md shadow-none disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto min-w-[180px] h-12 flex items-center justify-center gap-2 bg-[#047857] hover:bg-[#065f46] text-white px-8 rounded-xl text-sm font-semibold transition-all shadow-md shadow-none disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {submitting ? (
                     <span>Sending message...</span>
@@ -331,7 +331,7 @@ export default function ContactPage() {
             {/* Operating Hubs Card */}
             <div className="contact-panel p-6">
               <div className="flex items-center gap-2.5 mb-3.5">
-                <MapPin className="w-5 h-5 text-[#ff4932]" />
+                <MapPin className="w-5 h-5 text-[#047857]" />
                 <h3 className="text-base font-bold text-gray-900">Kerala Hub Locations</h3>
               </div>
               <div className="space-y-2.5 text-xs text-gray-600">
@@ -362,12 +362,12 @@ export default function ContactPage() {
                       <button
                         type="button"
                         onClick={() => setOpenFaq(isOpen ? -1 : index)}
-                        className="w-full px-4 py-3.5 text-left flex items-center justify-between gap-3 text-xs font-semibold text-gray-800 hover:text-[#ff4932] transition-colors"
+                        className="w-full px-4 py-3.5 text-left flex items-center justify-between gap-3 text-xs font-semibold text-gray-800 hover:text-[#047857] transition-colors"
                       >
                         <span>{faq.q}</span>
                         <ChevronDown
                           className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${
-                            isOpen ? 'rotate-180 text-[#ff4932]' : ''
+                            isOpen ? 'rotate-180 text-[#047857]' : ''
                           }`}
                         />
                       </button>

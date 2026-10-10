@@ -37,7 +37,7 @@ const testimonials = [
 ];
 
 const inputClass =
-  "w-full rounded-2xl border border-slate-200 bg-white px-4 pb-3 pt-6 text-sm text-slate-900 outline-none transition placeholder:text-transparent focus:border-[#ff4932] focus:ring-4 focus:ring-[#ff4932]/10";
+  "w-full rounded-2xl border border-slate-200 bg-white px-4 pb-3 pt-6 text-sm text-slate-900 outline-none transition placeholder:text-transparent focus:border-[#047857] focus:ring-4 focus:ring-[#047857]/10";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -123,15 +123,15 @@ export default function Login() {
 
   return (
     <main className="account-theme login-theme min-h-screen bg-white text-slate-900 lg:grid lg:grid-cols-[minmax(0,1.04fr)_minmax(480px,0.96fr)]">
-      <section className="relative hidden min-h-screen overflow-hidden bg-[#080808] px-10 py-10 text-white lg:flex lg:flex-col xl:px-16">
+      <section className="relative hidden min-h-screen overflow-hidden bg-[#062f26] px-10 py-10 text-white lg:flex lg:flex-col xl:px-16">
         <div className="absolute inset-0 bg-[url('/images/Kerala.jpg')] bg-cover bg-center opacity-25" />
         <div className="absolute inset-0 bg-[linear-gradient(115deg,rgba(15,17,21,0.98)_0%,rgba(15,17,21,0.78)_48%,rgba(15,17,21,0.96)_100%)]" />
-        <div className="absolute -left-20 top-20 h-72 w-72 rounded-full bg-[#ff4932]/25 blur-3xl" />
-        <div className="absolute -bottom-24 right-10 h-96 w-96 rounded-full bg-[#ff4932]/15 blur-3xl" />
+        <div className="absolute -left-20 top-20 h-72 w-72 rounded-full bg-[#047857]/25 blur-3xl" />
+        <div className="absolute -bottom-24 right-10 h-96 w-96 rounded-full bg-[#047857]/15 blur-3xl" />
 
         <BrandMark />
         <div className="relative z-10 mt-auto max-w-xl pb-8">
-          <p className="mb-5 text-xs font-bold uppercase tracking-[0.28em] text-[#ff4932]">
+          <p className="mb-5 text-xs font-bold uppercase tracking-[0.28em] text-[#047857]">
             Self-drive cars across Kerala
           </p>
           <h1 className="max-w-2xl text-5xl font-black leading-[1.03] tracking-tight xl:text-7xl">
@@ -151,7 +151,7 @@ export default function Login() {
               <p className="max-w-lg text-lg font-medium leading-relaxed text-white/90">
                 "{testimonials[testimonialIndex].quote}"
               </p>
-              <p className="mt-4 text-sm font-semibold text-[#ff4932]">
+              <p className="mt-4 text-sm font-semibold text-[#047857]">
                 {testimonials[testimonialIndex].name}
               </p>
               <p className="mt-1 text-xs text-white/45">
@@ -165,7 +165,7 @@ export default function Login() {
                   type="button"
                   aria-label={`Show testimonial ${index + 1}`}
                   onClick={() => setTestimonialIndex(index)}
-                  className={`h-1.5 rounded-full transition-all ${index === testimonialIndex ? "w-10 bg-[#ff4932]" : "w-2 bg-white/25"}`}
+                  className={`h-1.5 rounded-full transition-all ${index === testimonialIndex ? "w-10 bg-[#047857]" : "w-2 bg-white/25"}`}
                 />
               ))}
             </div>
@@ -190,17 +190,17 @@ export default function Login() {
 
       <section className="relative flex min-h-screen items-center justify-center overflow-hidden px-5 py-8 sm:px-10">
         <div className="absolute right-5 top-5 z-20 sm:right-10"><ThemeToggle /></div>
-        <div className="absolute -right-28 top-10 h-72 w-72 rounded-full bg-[#ffede9]/70 blur-3xl" />
-        <div className="absolute -bottom-28 left-0 h-72 w-72 rounded-full bg-[#ffede9]/70 blur-3xl" />
+        <div className="absolute -right-28 top-10 h-72 w-72 rounded-full bg-[#ecfdf5]/70 blur-3xl" />
+        <div className="absolute -bottom-28 left-0 h-72 w-72 rounded-full bg-[#ecfdf5]/70 blur-3xl" />
         <div className="relative z-10 w-full max-w-md">
           <div className="mb-8 lg:hidden">
             <BrandMark dark />
           </div>
           <div className="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-[0_24px_80px_rgba(0,0,0,0.06)]">
-            <div className="h-1.5 bg-gradient-to-r from-[#ff4932] via-[#ff4932] to-[#ff4932]" />
+            <div className="h-1.5 bg-gradient-to-r from-[#047857] via-[#047857] to-[#047857]" />
             {success ? (
               <div className="flex min-h-[480px] flex-col items-center justify-center px-8 text-center">
-                <div className="animate-[lg-pop_0.45s_ease-out] rounded-full bg-[#ffede9] p-5 text-[#ff4932]">
+                <div className="animate-[lg-pop_0.45s_ease-out] rounded-full bg-[#ecfdf5] p-5 text-[#047857]">
                   <ShieldCheck className="h-12 w-12" />
                 </div>
                 <h2 className="mt-6 text-2xl font-black">You&apos;re in.</h2>
@@ -212,7 +212,7 @@ export default function Login() {
             ) : (
               <form onSubmit={handleSubmit} className="p-7 sm:p-10">
                 <div className="mb-9">
-                  <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#ff4932]">
+                  <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#047857]">
                     Welcome back
                   </p>
                   <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950">
@@ -249,7 +249,7 @@ export default function Login() {
                       <button
                         type="button"
                         onClick={() => setShowPassword((current) => !current)}
-                        className="text-slate-400 transition hover:text-[#ff4932]"
+                        className="text-slate-400 transition hover:text-[#047857]"
                         aria-label={
                           showPassword ? "Hide password" : "Show password"
                         }
@@ -275,13 +275,13 @@ export default function Login() {
                       type="checkbox"
                       checked={rememberMe}
                       onChange={(event) => setRememberMe(event.target.checked)}
-                      className="h-4 w-4 rounded border-slate-300 accent-[#ff4932]"
+                      className="h-4 w-4 rounded border-slate-300 accent-[#047857]"
                     />
                     Remember me
                   </label>
                   <button
                     type="button"
-                    className="font-semibold text-[#ff4932] hover:text-[#ff4932]"
+                    className="font-semibold text-[#047857] hover:text-[#047857]"
                   >
                     Forgot password?
                   </button>
@@ -290,7 +290,7 @@ export default function Login() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="mt-8 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#ff4932] px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#ff4932]/20 transition hover:bg-[#ff4932] disabled:cursor-wait disabled:opacity-70"
+                  className="mt-8 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#047857] px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#047857]/20 transition hover:bg-[#047857] disabled:cursor-wait disabled:opacity-70"
                 >
                   {loading ? (
                     <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
@@ -332,7 +332,7 @@ function BrandMark({ dark = false }) {
   return (
     <div className={`relative z-10 ${dark ? "text-slate-950" : "text-white"}`}>
       <p className="text-2xl font-black tracking-tight">
-        Zudo<span className="font-medium text-[#ff4932]">cars</span>
+        Zudo<span className="font-medium text-[#047857]">cars</span>
       </p>
       <p
         className={`mt-1 text-[10px] font-bold uppercase tracking-[0.2em] ${dark ? "text-slate-400" : "text-white/45"}`}
@@ -358,7 +358,7 @@ function FloatingField({
     <label
       className={`relative block ${error ? "animate-[lg-shake_0.35s_ease-in-out]" : ""}`}
     >
-      <Icon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400 transition peer-focus:text-[#ff4932]" />
+      <Icon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400 transition peer-focus:text-[#047857]" />
       <input
         required
         type={type}
@@ -369,7 +369,7 @@ function FloatingField({
         placeholder=" "
         className={`${inputClass} peer pl-12 ${adornment ? "pr-12" : ""} ${error ? "border-red-400 ring-4 ring-red-500/10" : ""}`}
       />
-      <span className="pointer-events-none absolute left-12 top-1/2 -translate-y-1/2 text-sm text-slate-400 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-focus:top-3 peer-focus:text-[10px] peer-focus:font-bold peer-focus:uppercase peer-focus:tracking-wider peer-focus:text-[#ff4932] peer-not-placeholder-shown:top-3 peer-not-placeholder-shown:text-[10px] peer-not-placeholder-shown:font-bold peer-not-placeholder-shown:uppercase peer-not-placeholder-shown:tracking-wider">
+      <span className="pointer-events-none absolute left-12 top-1/2 -translate-y-1/2 text-sm text-slate-400 transition-all peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-sm peer-focus:top-3 peer-focus:text-[10px] peer-focus:font-bold peer-focus:uppercase peer-focus:tracking-wider peer-focus:text-[#047857] peer-not-placeholder-shown:top-3 peer-not-placeholder-shown:text-[10px] peer-not-placeholder-shown:font-bold peer-not-placeholder-shown:uppercase peer-not-placeholder-shown:tracking-wider">
         {label}
       </span>
       {adornment && (

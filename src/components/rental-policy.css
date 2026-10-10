@@ -7,13 +7,13 @@
 .rental-policy-dialog [class*="bg-cyan-"],.rental-policy-dialog [class*="bg-rose-"],.rental-policy-dialog [class*="bg-amber-"]{background:var(--policy-tint)!important}
 .rental-policy-dialog [class*="border-"],.rental-policy-dialog [class*="divide-"]>*+*{border-color:var(--policy-line)!important}
 .rental-policy-dialog button:hover:not(.rental-policy-primary){background:var(--policy-chip)!important;color:var(--policy-text)!important}
-.rental-policy-dialog button[class*="bg-cyan-500/20"]{background:#ff4932!important;color:white!important;border-color:#ff4932!important;border-radius:20px}
+.rental-policy-dialog button[class*="bg-cyan-500/20"]{background:#047857!important;color:white!important;border-color:#047857!important;border-radius:20px}
 .rental-policy-dialog input{background:var(--policy-paper)!important;color:var(--policy-text)!important;border-radius:12px;padding:9px 12px}
 .rental-policy-dialog input::placeholder{color:var(--policy-muted)!important}
-.rental-policy-dialog .rental-policy-primary{background:#ff4932!important;background-image:none!important;border:0!important;color:#fff!important;box-shadow:none}
-.rental-policy-dialog .rental-policy-primary:hover{background:#e63823!important;color:#fff!important}
+.rental-policy-dialog .rental-policy-primary{background:#047857!important;background-image:none!important;border:0!important;color:#fff!important;box-shadow:none}
+.rental-policy-dialog .rental-policy-primary:hover{background:#065f46!important;color:#fff!important}
 .rental-policy-dialog table thead tr{background:var(--policy-chip)!important}
 .rental-policy-dialog table tbody tr:hover{background:var(--policy-surface)!important}
-.rental-policy-dialog :is(button,a,input):focus-visible{outline:2px solid #ff4932;outline-offset:3px}
+.rental-policy-dialog :is(button,a,input):focus-visible{outline:2px solid #047857;outline-offset:3px}
 .dark .rental-policy-dialog{--policy-paper:#202020;--policy-surface:#292929;--policy-chip:#373737;--policy-text:#f5f5f5;--policy-muted:#b7b7b7;--policy-line:#414141;--policy-accent:#ff9a88;--policy-tint:#3b2823}
 @media(max-width:600px){.rental-policy-dialog{border-radius:20px}.rental-policy-dialog h2{line-height:1.3}}

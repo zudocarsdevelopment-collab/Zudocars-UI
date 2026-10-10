@@ -68,16 +68,16 @@ function localDateValue() {
   return date.toISOString().slice(0, 10);
 }
 
-function MaintenanceEntryModal({ mode, cars, serviceTypes, onClose, onSave }) {
+function MaintenanceEntryModal({ mode, cars, serviceTypes, selectedSchedule, onClose, onSave }) {
   const isSchedule = mode === "schedule";
   const [form, setForm] = useState({
-    car: cars[0]?.id ?? "",
-    serviceType: serviceTypes[0]?.id ?? "",
+    car: selectedSchedule?.carId ?? cars[0]?.id ?? "",
+    serviceType: selectedSchedule?.serviceTypeId ?? serviceTypes[0]?.id ?? "",
     dueDate: localDateValue(),
     dueOdometer: "",
     status: "scheduled",
     serviceDate: localDateValue(),
-    odometerReading: "",
+    odometerReading: cars.find(car => car.id === selectedSchedule?.carId)?.odometer ?? "",
     serviceCenter: "",
     description: "",
     partsCost: "0",
@@ -314,7 +314,7 @@ function SubNav({ active, onSelect }) {
   );
 }
 
-function ServiceQueue({ cars, schedules, onStatus }) {
+function ServiceQueue({ cars, schedules, onStatus, onLog }) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
@@ -358,7 +358,7 @@ function ServiceQueue({ cars, schedules, onStatus }) {
     <div className="space-y-5">
       <Toolbar
         title="Service Queue"
-        subtitle="Live maintenance schedules from the Django maintenance API"
+        subtitle="Checkups every 5,000 km and full services every 10,000 km. Log completed work to set the next reminder."
         query={query}
         setQuery={setQuery}
       >
@@ -414,11 +414,17 @@ function ServiceQueue({ cars, schedules, onStatus }) {
                       <td className="whitespace-nowrap px-4 py-4 text-slate-600">{row.dueDate || "—"}</td>
                       <td className="whitespace-nowrap px-4 py-4 text-slate-600">
                         {row.dueOdometer ? `${row.dueOdometer.toLocaleString("en-IN")} km` : "—"}
+                        {row.dueOdometer != null && row.car && <p className="mt-1 text-xs text-slate-400">
+                          Current: {row.car.odometer.toLocaleString('en-IN')} km · {Math.max(0, row.dueOdometer - row.car.odometer).toLocaleString('en-IN')} km remaining
+                        </p>}
                       </td>
                       <td className="px-4 py-4">
-                        <select aria-label="Schedule status" value={row.status} onChange={(event) => onStatus(row.id, event.target.value)} className="rounded-lg border px-2 py-1">
+                        {['Checkup (5,000 km)', 'Full service (10,000 km)'].includes(row.serviceTypeName) ? <div className="space-y-2">
+                          <p className="font-semibold">{row.statusLabel}</p>
+                          {!['completed', 'cancelled'].includes(row.status) && <button onClick={() => onLog(row)} className="text-[#047857] font-semibold">Log completed work</button>}
+                        </div> : <select aria-label="Schedule status" value={row.status} onChange={(event) => onStatus(row.id, event.target.value)} className="rounded-lg border px-2 py-1">
                           {Object.entries(SCHEDULE_STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                        </select>
+                        </select>}
                       </td>
                     </tr>
                   ))}
@@ -620,7 +626,7 @@ function ServiceCentres({ records }) {
   );
 }
 
-export default function ServiceManagement({ cars = [] }) {
+export default function ServiceManagement({ cars = [], onFleetRefresh }) {
   const [subTab, setSubTab] = useState("queue");
   const [schedules, setSchedules] = useState([]);
   const [records, setRecords] = useState([]);
@@ -629,6 +635,7 @@ export default function ServiceManagement({ cars = [] }) {
   const [scheduleError, setScheduleError] = useState("");
   const [serviceTypes, setServiceTypes] = useState([]);
   const [entryMode, setEntryMode] = useState("");
+  const [selectedSchedule, setSelectedSchedule] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -670,6 +677,9 @@ export default function ServiceManagement({ cars = [] }) {
       await createMaintenanceSchedule(payload);
     } else {
       await createServiceRecord(payload);
+      // The record is already saved; a fleet refresh failure must not
+      // encourage the operator to submit the same maintenance twice.
+      try { await onFleetRefresh?.(); } catch { /* Refresh the dashboard to reload mileage. */ }
     }
     await load();
   }
@@ -690,7 +700,7 @@ export default function ServiceManagement({ cars = [] }) {
             catch (error) { setScheduleError(error.message); }
           }}>Add service type</button>
           <button
-            onClick={() => setEntryMode(subTab === "queue" ? "schedule" : "record")}
+            onClick={() => { setSelectedSchedule(null); setEntryMode(subTab === "queue" ? "schedule" : "record"); }}
             className="inline-flex items-center gap-2 rounded-xl bg-teal-800 px-3 py-2.5 text-sm font-bold text-white hover:bg-teal-900"
           >
             <Plus className="h-4 w-4" />
@@ -719,7 +729,7 @@ export default function ServiceManagement({ cars = [] }) {
           {subTab === "queue" && (scheduleError ? (
             <LoadError message={scheduleError} onRetry={load} />
           ) : (
-            <ServiceQueue cars={cars} schedules={schedules} onStatus={async (id, status) => {
+            <ServiceQueue cars={cars} schedules={schedules} onLog={schedule => { setSelectedSchedule(schedule); setEntryMode('record'); }} onStatus={async (id, status) => {
               try { await updateMaintenanceSchedule(id, { status }); await load(); }
               catch (error) { setScheduleError(error.message); }
             }} />
@@ -745,6 +755,7 @@ export default function ServiceManagement({ cars = [] }) {
           mode={entryMode}
           cars={cars}
           serviceTypes={serviceTypes}
+          selectedSchedule={selectedSchedule}
           onClose={() => setEntryMode("")}
           onSave={saveEntry}
         />

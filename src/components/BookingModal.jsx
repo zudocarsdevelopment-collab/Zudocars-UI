@@ -396,7 +396,7 @@ function DepositTermsStep({ form, update, errors, deposit, onOpenTerms }) {
         <p className="font-semibold text-gray-800">By booking, you agree to our Self-Drive Terms:</p>
         <ul className="list-disc pl-5 space-y-1">
           <li><strong>Booking confirmation:</strong> Rs. 2,000 advance (transferable within 1 month).</li>
-          <li><strong>Deposit:</strong> Rs. 5,000 (5-seater) / Rs. 10,000 (7-seater), payable at pickup.</li>
+          <li><strong>Deposit:</strong> Rs. 5,000 for every vehicle, payable at pickup.</li>
           <li><strong>Timing:</strong> 24 hrs calculated from pickup (8 AM – 8 PM office hours). Late drop: Rs. 300/hr.</li>
           <li><strong>Documents & Age:</strong> Original Driving Licence (mandatory) + 1 ID proof. Renter must be 23+ yrs and present in person to sign physical handover documents.</li>
           <li><strong>Fuel & Condition:</strong> Return with same fuel level and in the same condition as received.</li>

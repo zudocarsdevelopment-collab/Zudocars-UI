@@ -443,7 +443,7 @@ function CarCard({ car, onBook }) {
           </div>
           <button
             onClick={() => onBook(car)}
-            className="bg-[#ff4932] text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#e63823] transition-colors"
+            className="bg-[#047857] text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#065f46] transition-colors"
           >
             Book Now
           </button>
@@ -480,7 +480,7 @@ function BookingModal({ car, searchParams, onClose }) {
 
   const baseFare = car.price
   const depositAmount = 5000
-  const totalPayable = baseFare + BASE_TO_DELIVERY_FEE + RETURN_TO_BASE_FEE
+  const totalPayable = baseFare + BASE_TO_DELIVERY_FEE + RETURN_TO_BASE_FEE + depositAmount
   const balanceDueOnPickup = Math.max(totalPayable - ADVANCE_AMOUNT, 0)
 
   const canGoToStep2 = customerName.trim().length > 1 && customerPhone.trim().length >= 10 && agreeTerms
@@ -730,7 +730,7 @@ function BookingModal({ car, searchParams, onClose }) {
                       <span className="font-medium text-gray-900">{formatINR(depositAmount)}</span>
                     </div>
                     <div className="pt-2.5 border-t border-gray-200 flex justify-between font-bold text-gray-900">
-                      <span>Total payable</span>
+                      <span>Total including refundable deposit</span>
                       <span>{formatINR(totalPayable)}</span>
                     </div>
                     <div className="flex justify-between text-blue-700 font-semibold">
@@ -798,7 +798,7 @@ function BookingModal({ car, searchParams, onClose }) {
                     <button
                       onClick={handleConfirm}
                       disabled={!agreeTerms || submitting}
-                      className="flex items-center gap-1.5 bg-[#ff4932] text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#e63823] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                      className="flex items-center gap-1.5 bg-[#047857] text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#065f46] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                     >
                       {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                       {submitting ? 'Booking…' : 'Book Now'}
