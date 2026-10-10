@@ -62,7 +62,7 @@ function AppRoutes() {
   }
 
   return (
-    <div className={`min-h-screen overflow-x-hidden bg-slate-50 dark:bg-slate-950 ${pathname === '/' ? 'home-shell' : pathname === '/cars' ? 'search-shell' : ''}`}>
+    <div className={`min-h-screen overflow-x-hidden bg-slate-50 dark:bg-slate-950 ${pathname === '/' || pathname === '/about' ? 'home-shell' : pathname === '/cars' ? 'search-shell' : ''}`}>
       <Navbar />
       <ScrollToHash />
       <Routes>

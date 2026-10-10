@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MapPin, Search } from 'lucide-react'
+import { motion, useReducedMotion } from 'framer-motion'
 import usePickupHubs from '../lib/usePickupHubs'
+import HeroVideo from './HeroVideo'
 
 const localDate = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`
 const initialDate = days => { const date = new Date(); date.setDate(date.getDate()+days); return localDate(date) }
 export default function RentalHero() {
   const navigate = useNavigate()
+  const reduceMotion = useReducedMotion()
   const { hubs, error: locationError } = usePickupHubs()
   const [pickup, setPickup] = useState('')
   const [dropoff, setDropoff] = useState('')
@@ -26,8 +29,24 @@ export default function RentalHero() {
     if (new Date(`${till}T${tillTime}`) <= new Date(`${from}T${fromTime}`)) { setError('Return must be after pickup.'); return }
     navigate(`/cars?${new URLSearchParams({date_from:from,time_from:fromTime,date_to:till,time_to:tillTime,pickup_location_id:pickup,dropoff_location_id:different?dropoff:pickup,vehicle_type:'car'})}`)
   }
-  return <section className="rental-hero"><div className="rental-hero-content">
-    <h1>Rent a car in Kerala</h1><p className="rental-subtitle">Find your next drive<br/>with Zudo Cars</p>
+  return <section className="rental-hero">
+    <img
+      className="rental-hero-image"
+      src="https://asset.autocarindia.com/static/news/images/20260806_063234_0bf9ea06.jpg"
+      alt=""
+      aria-hidden="true"
+      fetchPriority="high"
+    />
+    <HeroVideo reduceMotion={reduceMotion}/>
+    <motion.div className="rental-hero-content"
+      initial={reduceMotion ? false : { opacity: 0, y: 28 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: reduceMotion ? 0 : 0.75, delay: reduceMotion ? 0 : 0.25, ease: 'easeOut' }}>
+    <motion.h1
+      initial={false}
+      animate={{ color: '#ffffff' }}
+      transition={{ duration: reduceMotion ? 0 : 1.2, ease: 'easeInOut' }}
+    >Rent a car in Kerala</motion.h1><p className="rental-subtitle">Find your next drive<br/>with Zudo Cars</p>
     <div className="rental-tabs" aria-label="Rental period"><button type="button" aria-pressed={!monthly} className={!monthly?'selected':''} onClick={()=>selectPeriod(false)}>Daily rentals</button><button type="button" aria-pressed={monthly} className={monthly?'selected':''} onClick={()=>selectPeriod(true)}>Monthly rentals</button></div>
     <form className="rental-search" onSubmit={search}>
       <label className="location-field"><MapPin size={25}/><span><span className="field-caption">Pickup location</span><select aria-label="Pickup location" value={pickup} onChange={e=>setPickup(e.target.value)} required><option value="" disabled>{hubs.length?'Choose location':'Choose pickup location'}</option>{hubs.map(h=><option key={h.id} value={h.id}>{h.name}</option>)}</select></span></label>
@@ -37,5 +56,5 @@ export default function RentalHero() {
       <div className="rental-return"><label><input type="checkbox" checked={different} onChange={e=>setDifferent(e.target.checked)}/> Return to a different location</label>{different && <select aria-label="Drop-off location" value={dropoff} onChange={e=>setDropoff(e.target.value)}>{hubs.map(h=><option key={h.id} value={h.id}>{h.name}</option>)}</select>}</div>
       {(error || locationError) && <p role="alert" className="rental-error">{error || locationError}</p>}
     </form>
-  </div></section>
+  </motion.div></section>
 }

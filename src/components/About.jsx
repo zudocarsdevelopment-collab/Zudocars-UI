@@ -1,25 +1,8 @@
-import { Link } from "react-router-dom";
-import { useState } from "react";
-import {
-  ShieldCheck,
-  Truck,
-  Clock,
-  BadgeIndianRupee,
-  MapPin,
-  Users,
-  Car,
-  Star,
-  Sparkles,
-  ArrowRight,
-  CheckCircle2,
-  PhoneCall,
-  MessageCircle,
-  Compass,
-  KeyRound,
-  ShieldAlert,
-} from "lucide-react";
-import EnquiryModal from "./EnquiryModal";
-
+import { Link } from 'react-router-dom'
+import { ShieldCheck, Truck, Clock, BadgeIndianRupee, Car, Compass, KeyRound, ArrowUpRight, ArrowRight, MessageCircle } from 'lucide-react'
+import { motion, useReducedMotion } from 'framer-motion'
+import '../pages/home.css'
+import './about.css'
 const stats = [
   {
     label: "Years on Kerala Roads",
@@ -123,350 +106,56 @@ const routes = [
 ];
 
 export default function About() {
-  const [isEnquiryOpen, setIsEnquiryOpen] = useState(false);
-
-  return (
-    <div className="bg-[#050710] text-white min-h-screen font-sans selection:bg-cyan-500 selection:text-black">
-      {/* Hero Section */}
-      <section className="relative min-h-[85vh] lg:min-h-[90vh] flex items-center overflow-hidden pt-24 lg:pt-28">
-        {/* Background Image with Deep Cinematic Gradients */}
-        <div className="absolute inset-0 z-0">
-          <img
-            src="/images/Kerala.jpg"
-            alt="Scenic Kerala landscape"
-            className="w-full h-full object-cover object-center filter brightness-[0.45] contrast-[1.1] scale-105"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#050710] via-[#050710]/70 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#050710] via-[#050710]/80 to-transparent" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-cyan-500/15 via-transparent to-transparent" />
+  const reduceMotion = useReducedMotion()
+  const reveal = {
+    initial: reduceMotion ? false : { opacity: 0, y: 24 },
+    whileInView: { opacity: 1, y: 0 },
+    viewport: { once: true, amount: 0.15 },
+    transition: { duration: 0.6 },
+  }
+  return <main className="rental-home about-home">
+    <section className="about-hero">
+      <img src="/images/Kerala.jpg" alt="Scenic Kerala landscape" className="about-hero-image" fetchPriority="high" />
+      <motion.div className="about-hero-content" {...reveal}>
+        <span className="about-eyebrow">About Zudo Cars</span>
+        <h1>Kerala unlocked.<br/><span>One mile at a time.</span></h1>
+        <p>We built Zudo Cars on a single conviction: exploring God's Own Country should feel effortless, exhilarating, and completely transparent. Pristine cars and the freedom of the open road.</p>
+        <div className="about-actions">
+          <Link className="about-button" to="/cars">Browse cars <ArrowRight size={20}/></Link>
+          <a className="about-button about-button-outline" href="https://wa.me/918111946664?text=Hi%20Zudo%20Cars,%20I%20have%20an%20inquiry%20about%20renting%20a%20car" target="_blank" rel="noopener noreferrer"><MessageCircle size={20}/>Chat on WhatsApp</a>
         </div>
-
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24 w-full">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.06] border border-white/10 backdrop-blur-md mb-6">
-              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="text-xs font-semibold text-cyan-300 uppercase tracking-widest font-mono">
-                The Zudo Experience
-              </span>
-            </div>
-
-            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white leading-[1.08] mb-6">
-              Kerala Unlocked.{" "}
-              <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent">
-                One Mile at a Time.
-              </span>
-            </h1>
-
-            <p className="text-base sm:text-lg text-gray-300 leading-relaxed max-w-2xl mb-9">
-              We built Zudo Cars on a single conviction: exploring God's Own Country should feel effortless, exhilarating, and completely transparent. No old beaters, no counter queues, no surprise billing — just pristine cars and the freedom of the open road.
-            </p>
-
-            <div className="flex flex-wrap items-center gap-4">
-              <Link
-                to="/cars"
-                className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold px-7 py-3.5 rounded-xl text-sm tracking-wide shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/35 transition-all"
-              >
-                Browse Fleet & Book
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-              <a
-                href="https://wa.me/918111946664?text=Hi%20Zudo%20Cars,%20I%20have%20an%20inquiry%20about%20renting%20a%20car"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl text-sm font-bold bg-white/[0.05] hover:bg-white/[0.1] border border-white/15 text-white hover:border-cyan-400/40 backdrop-blur-md transition-all"
-              >
-                <MessageCircle className="w-4 h-4 text-emerald-400" />
-                Chat on WhatsApp
-              </a>
-            </div>
-          </div>
-        </div>
+      </motion.div>
+    </section>
+    <div className="rental-content about-content">
+      <section className="about-stats" aria-label="Zudo Cars at a glance">
+        {stats.map(stat => <article key={stat.label}><strong>{stat.value}</strong><h3>{stat.label}</h3><p>{stat.sub}</p></article>)}
       </section>
-
-      {/* Floating Key Metrics Strip */}
-      <section className="relative z-20 -mt-10 sm:-mt-14 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 bg-[#0d121f]/95 border border-white/10 backdrop-blur-2xl rounded-3xl p-5 sm:p-7 shadow-2xl shadow-black/80">
-          {stats.map((s) => (
-            <div
-              key={s.label}
-              className="p-3 sm:p-4 rounded-2xl hover:bg-white/[0.02] transition-colors"
-            >
-              <div className="text-3xl sm:text-4xl lg:text-5xl font-black bg-gradient-to-r from-white via-gray-100 to-gray-400 bg-clip-text text-transparent">
-                {s.value}
-              </div>
-              <div className="text-xs sm:text-sm font-bold text-cyan-300 mt-1">
-                {s.label}
-              </div>
-              <div className="text-[11px] text-gray-400 mt-0.5 hidden sm:block">
-                {s.sub}
-              </div>
-            </div>
-          ))}
+      <motion.section className="about-story" {...reveal}>
+        <img src="/images/ourStory.jpg" alt="Zudo Cars on a scenic Kerala highway" loading="lazy" />
+        <div>
+          <span className="about-eyebrow">Our story & mission</span>
+          <h2>Born in Kochi.<br/>Made for Kerala roads.</h2>
+          <p>Zudo Cars started with three sedans and one frustrating reality: hiring a self-drive car in Kerala too often meant broken odometers, pushy counter agents, and old vehicles that struggled on the first hill climb.</p>
+          <p>We rebuilt the experience around driver trust. We maintain our own company-owned fleet, inspect every component prior to departure, and back every journey with 24/7 on-ground assistance across all 14 districts of Kerala.</p>
+          <div className="about-story-points"><span><ShieldCheck size={21}/>Company-owned fleet</span><span><BadgeIndianRupee size={21}/>Transparent pricing</span></div>
         </div>
-      </section>
-
-      {/* Story & Origin Section */}
-      <section className="py-20 sm:py-32 relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
-            {/* Left: Image Showcase with Floating Glass Badges */}
-            <div className="lg:col-span-5 relative">
-              <div className="relative rounded-3xl overflow-hidden border border-white/10 aspect-[4/5] shadow-2xl shadow-black/90">
-                <img
-                  src="/images/ourStory.jpg"
-                  alt="Zudo Cars on scenic Kerala highway"
-                  className="w-full h-full object-cover object-center filter contrast-[1.05]"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#050710] via-transparent to-transparent opacity-80" />
-              </div>
-
-              {/* Floating Review Badge */}
-              <div className="absolute -bottom-6 -right-4 sm:right-6 bg-[#0d121f]/95 border border-white/10 backdrop-blur-xl rounded-2xl p-4 shadow-2xl flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
-                  <Star className="w-5 h-5 text-cyan-400 fill-cyan-400" />
-                </div>
-                <div>
-                  <div className="text-sm font-bold text-white">4.9 / 5.0 Rating</div>
-                  <div className="text-xs text-gray-400">Over 6,500+ Verified Trips</div>
-                </div>
-              </div>
-
-              {/* Floating Quality Seal Badge */}
-              <div className="absolute -top-4 -left-4 bg-[#0d121f]/95 border border-white/10 backdrop-blur-xl rounded-2xl px-3.5 py-2 shadow-2xl flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <span className="text-xs font-semibold text-gray-200">100% Sanitized Fleet</span>
-              </div>
-            </div>
-
-            {/* Right: Narrative & Core Advantages */}
-            <div className="lg:col-span-7 space-y-6">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-semibold uppercase tracking-wider font-mono">
-                Our Story & Mission
-              </div>
-
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
-                Born in Kochi.{" "}
-                <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-                  Engineered for Every Kerala Road.
-                </span>
-              </h2>
-
-              <p className="text-sm sm:text-base text-gray-300 leading-relaxed">
-                Zudo Cars started with three sedans and one frustrating reality: hiring a self-drive car in Kerala too often meant broken odometers, pushy counter agents, and old vehicles that struggled on the first hill climb.
-              </p>
-
-              <p className="text-sm sm:text-base text-gray-400 leading-relaxed">
-                We rebuilt the entire experience around driver trust. We maintain our own company-owned fleet, inspect every component prior to departure, and back every journey with 24/7 on-ground assistance across all 14 districts of Kerala.
-              </p>
-
-              {/* Key Pillars */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
-                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/10 hover:border-cyan-500/30 transition-all">
-                  <CheckCircle2 className="w-5 h-5 text-cyan-400 mb-2" />
-                  <h3 className="text-sm font-bold text-white mb-1">Company-Owned Fleet</h3>
-                  <p className="text-xs text-gray-400 leading-relaxed">
-                    Zero third-party middlemen. Every car is serviced directly at authorized brand centres.
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/10 hover:border-cyan-500/30 transition-all">
-                  <CheckCircle2 className="w-5 h-5 text-cyan-400 mb-2" />
-                  <h3 className="text-sm font-bold text-white mb-1">Zero Security Friction</h3>
-                  <p className="text-xs text-gray-400 leading-relaxed">
-                    Fast digital verification and prompt deposit releases with zero hidden charges.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* The 3-Step Simple Journey */}
-      <section className="py-20 sm:py-28 bg-[#090d18] border-y border-white/[0.06]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-14">
-            <span className="text-xs font-bold tracking-[0.25em] text-cyan-400 uppercase font-mono">
-              Simple 3-Step Process
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight mt-2 mb-3">
-              How Renting with Zudo Works
-            </h2>
-            <p className="text-xs sm:text-sm text-gray-400">
-              From selection to key handover in less than 2 minutes. No paperwork delays.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {steps.map((step) => {
-              const Icon = step.icon;
-              return (
-                <div
-                  key={step.number}
-                  className="relative p-6 sm:p-8 rounded-3xl bg-white/[0.02] border border-white/10 hover:bg-white/[0.04] hover:border-cyan-500/40 transition-all duration-300 group"
-                >
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center group-hover:bg-cyan-500/20 transition-colors">
-                      <Icon className="w-6 h-6 text-cyan-400" />
-                    </div>
-                    <span className="text-3xl font-black text-white/15 font-mono">
-                      {step.number}
-                    </span>
-                  </div>
-
-                  <h3 className="text-lg font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors">
-                    {step.title}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-gray-400 leading-relaxed">
-                    {step.desc}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Core Values & Fleet Guarantees */}
-      <section className="py-20 sm:py-32">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-2xl mb-14">
-            <span className="text-xs font-bold tracking-[0.25em] text-cyan-400 uppercase font-mono">
-              Why Drivers Trust Zudo
-            </span>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight mt-2 mb-3">
-              The 4 Uncompromising Standards.
-            </h2>
-            <p className="text-sm text-gray-400">
-              Built deliberately different from the traditional rental counter.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {values.map(({ icon: Icon, title, desc, badge }) => (
-              <div
-                key={title}
-                className="group rounded-3xl border border-white/10 bg-white/[0.02] p-6 sm:p-7 hover:bg-white/[0.05] hover:border-cyan-400/40 transition-all duration-300 flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-5">
-                    <div className="w-12 h-12 rounded-2xl bg-cyan-400/10 flex items-center justify-center group-hover:bg-cyan-400/20 transition-colors">
-                      <Icon className="w-6 h-6 text-cyan-400" />
-                    </div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 bg-cyan-400/10 px-2.5 py-1 rounded-full border border-cyan-400/20">
-                      {badge}
-                    </span>
-                  </div>
-
-                  <h3 className="text-base font-bold text-white mb-2.5 group-hover:text-cyan-300 transition-colors">
-                    {title}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-gray-400 leading-relaxed">
-                    {desc}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Signature Kerala Routes */}
-      <section className="py-20 sm:py-32 bg-[#090d18] border-t border-white/[0.06]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-end justify-between mb-12 flex-wrap gap-6">
-            <div className="max-w-xl">
-              <span className="text-xs font-bold tracking-[0.25em] text-cyan-400 uppercase font-mono">
-                Curated Roadtrips
-              </span>
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight mt-2">
-                Routes We Know by Heart.
-              </h2>
-            </div>
-            <p className="text-xs sm:text-sm text-gray-400 max-w-sm leading-relaxed">
-              Every route has been driven and verified by our road team — with optimal fuel stop recommendations and highway insights.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {routes.map((r) => (
-              <div
-                key={r.place}
-                className="group relative rounded-3xl overflow-hidden aspect-[3/4] border border-white/10 shadow-xl shadow-black/80"
-              >
-                <img
-                  src={r.img}
-                  alt={`Road to ${r.place}, Kerala`}
-                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-108 transition-transform duration-700 ease-out"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#050710] via-[#050710]/40 to-transparent opacity-95 group-hover:opacity-85 transition-opacity" />
-
-                <div className="absolute top-4 left-4 text-[11px] font-bold tracking-wide uppercase text-cyan-300 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/15">
-                  {r.tag}
-                </div>
-
-                <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6">
-                  <h3 className="text-xl sm:text-2xl font-black text-white mb-1 group-hover:text-cyan-300 transition-colors">
-                    {r.place}
-                  </h3>
-                  <p className="text-xs text-gray-300 mb-2">{r.detail}</p>
-                  <p className="text-[11px] text-cyan-400 font-medium">{r.recommended}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Final Call to Action */}
-      <section className="py-16 sm:py-24 relative">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 p-8 sm:p-12 md:p-16 text-center shadow-2xl shadow-blue-600/30 flex flex-col items-center justify-center">
-            {/* Ambient Background Glows */}
-            <div className="absolute -top-24 -right-24 w-80 h-80 bg-white/15 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-black/30 rounded-full blur-3xl pointer-events-none" />
-
-            {/* Badge */}
-            <div className="relative mb-5">
-              <span className="inline-flex items-center justify-center text-xs font-semibold uppercase tracking-wider text-cyan-200 bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/20">
-                Onam Special Offers
-              </span>
-            </div>
-
-            {/* Main Heading */}
-            <h2 className="relative text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-white mb-4 max-w-2xl mx-auto leading-tight">
-              Book Now for Amazing Onam Offers.
-            </h2>
-
-            {/* Subtitle / Description */}
-            <p className="relative text-sm sm:text-base text-white/90 max-w-xl mx-auto mb-8 leading-relaxed font-normal">
-              Celebrate the festive season with special Onam deals on premium self-drive cars across Kerala. Book online in 60 seconds or speak directly with our team.
-            </p>
-
-            {/* CTA Buttons Container */}
-            <div className="relative flex flex-col sm:flex-row items-center justify-center gap-3.5 sm:gap-4 w-full sm:w-auto">
-              <Link
-                to="/cars"
-                className="w-full sm:w-auto inline-flex items-center justify-center bg-black hover:bg-black/80 text-white px-8 py-3.5 rounded-xl text-sm font-bold tracking-wide transition-all shadow-xl hover:scale-102 min-w-[180px]"
-              >
-                Browse All Cars
-              </Link>
-              <a
-                href="https://wa.me/918111946664?text=Hi%20Zudo%20Cars,%20I%20would%20like%20to%20know%20about%20the%20Onam%20Offers%20and%20reserve%20a%20car"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full sm:w-auto inline-flex items-center justify-center bg-white/20 hover:bg-white/30 text-white border border-white/30 px-8 py-3.5 rounded-xl text-sm font-bold tracking-wide transition-all backdrop-blur-md min-w-[180px]"
-              >
-                WhatsApp Us Directly
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {isEnquiryOpen && (
-        <EnquiryModal onClose={() => setIsEnquiryOpen(false)} />
-      )}
+      </motion.section>
+      <motion.section className="rental-benefits about-values" {...reveal}>
+        <h2>Why drive with Zudo Cars?</h2>
+        <div>{values.map(({icon: Icon, title, desc, badge}) => <article key={title}><Icon size={42}/><span className="about-card-label">{badge}</span><h3>{title}</h3><p>{desc}</p></article>)}</div>
+      </motion.section>
+      <motion.section className="rental-steps about-steps" {...reveal}>
+        <h2>Your journey starts here</h2>
+        <div>{steps.map(step => <article key={step.number}><span>{step.number}</span><h3>{step.title}</h3><p>{step.desc}</p></article>)}</div>
+      </motion.section>
+      <motion.section className="rental-collections about-routes" {...reveal}>
+        <h2>Explore Kerala your way</h2><p>From mountain roads to the coast, find your next destination.</p>
+        <div>{routes.map(route => <Link to="/cars" key={route.place}><img src={route.img} alt={`Explore ${route.place}, Kerala`} loading="lazy"/><h3>{route.place}<ArrowUpRight size={22}/></h3><p>{route.tag}</p><p>{route.detail}</p><p>{route.recommended}</p></Link>)}</div>
+      </motion.section>
+      <motion.section className="about-cta" {...reveal}>
+        <span className="about-eyebrow">Your next drive</span><h2>More Kerala.<br/>More freedom.</h2><p>Find a car for your journey, or speak with our team to plan your rental.</p>
+        <div className="about-actions"><Link className="about-button" to="/cars">Find your car <ArrowRight size={20}/></Link><Link className="about-button about-button-outline" to="/contact">Talk to our team</Link></div>
+      </motion.section>
     </div>
-  );
+  </main>
 }
