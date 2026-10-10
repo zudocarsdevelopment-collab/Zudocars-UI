@@ -228,9 +228,7 @@ export default function DateTimeSelector({ onChange }) {
 
         {leadWarning && (
           <p className="mt-2.5 flex items-center gap-1.5 text-xs font-medium text-amber-600">
-            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-            Pickup time needs to be at least {MIN_LEAD_MINUTES} minutes from now
-            — pick a later time.
+            Please choose a pickup time at least {MIN_LEAD_MINUTES} minutes from now.
           </p>
         )}
       </div>

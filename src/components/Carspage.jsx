@@ -16,7 +16,6 @@ import {
   Calendar,
   Clock,
   MapPin,
-  ShieldAlert,
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
@@ -923,7 +922,7 @@ export default function CarsPage() {
     if (!paramsToUse.pickup_location_id || !paramsToUse.dropoff_location_id) { setError(hubError || 'No pickup locations are available yet. Please contact our team.'); setLoading(false); return }
 
     if (!isStartTimeBookable(paramsToUse.date_from, paramsToUse.time_from)) {
-      setError(`Pickup time needs to be at least ${MIN_LEAD_MINUTES} minutes from now. Please choose a later time.`)
+      setError(`Please choose a pickup time at least ${MIN_LEAD_MINUTES} minutes from now, then select Search Cars again.`)
       return
     }
 
@@ -949,7 +948,7 @@ export default function CarsPage() {
       })
 
       if (!response.ok) {
-        throw new Error(await extractApiError(response, 'Failed to fetch available vehicles.'))
+        throw new Error(await extractApiError(response, 'We couldn’t load available cars. Please try searching again.'))
       }
 
       const data = await response.json()
@@ -980,7 +979,9 @@ export default function CarsPage() {
       const max = prices.length ? Math.max(...prices) : 0
       setPriceRange([min, max])
     } catch (err) {
-      setError(err.message || 'An unexpected error occurred.')
+      setError(err.message === 'Failed to fetch'
+        ? 'We couldn’t load available cars. Please check your internet connection and try searching again.'
+        : err.message || 'We couldn’t load available cars. Please try searching again.')
     } finally {
       setSearchLoading(false)
       setLoading(false)
@@ -1284,9 +1285,8 @@ export default function CarsPage() {
         )}
 
         {error && !loading && !searchLoading && (
-          <div className="bg-red-50 border border-red-200 text-red-600 rounded-2xl p-6 text-center my-8 flex items-center justify-center gap-3">
-            <ShieldAlert className="w-5 h-5 shrink-0" />
-            <span>Couldn't fetch vehicles ({error}). Please try again.</span>
+          <div role="alert" className="bg-red-50 border border-red-200 text-red-600 rounded-2xl p-6 text-center my-8">
+            <span>{error}</span>
           </div>
         )}
 
