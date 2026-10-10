@@ -82,7 +82,7 @@ function normalizeCar(raw) {
     bodyType: raw.body_type || '',
     price: Number(raw.total_incl_tax ?? raw.daily_price ?? raw.hourly_rate ?? raw.price) || 0,
     dailyPrice: raw.daily_price == null || raw.daily_price === '' ? null : Number(raw.daily_price),
-    deposit: raw.deposit || 0,
+    deposit: 5000,
     deliveryAmount: Number(raw.delivery_amount ?? 1200),
     seats: raw.seats || 5,
     fuel: raw.fuel_type || '—',
@@ -479,7 +479,7 @@ function BookingModal({ car, searchParams, onClose }) {
   const RETURN_TO_BASE_FEE = car.deliveryAmount / 2
 
   const baseFare = car.price
-  const depositAmount = car.deposit || 0
+  const depositAmount = 5000
   const totalPayable = baseFare + BASE_TO_DELIVERY_FEE + RETURN_TO_BASE_FEE
   const balanceDueOnPickup = Math.max(totalPayable - ADVANCE_AMOUNT, 0)
 
@@ -726,7 +726,7 @@ function BookingModal({ car, searchParams, onClose }) {
                       <span className="font-medium text-gray-900">{formatINR(RETURN_TO_BASE_FEE)}</span>
                     </div>
                     <div className="flex justify-between text-gray-600">
-                      <span>Refundable deposit</span>
+                      <span>Refundable security deposit</span>
                       <span className="font-medium text-gray-900">{formatINR(depositAmount)}</span>
                     </div>
                     <div className="pt-2.5 border-t border-gray-200 flex justify-between font-bold text-gray-900">

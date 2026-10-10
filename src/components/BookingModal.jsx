@@ -76,7 +76,7 @@ export default function BookingModal({ car, slot, onClose }) {
 
   const hourlyRate = Number(car?.hourly_rate) || 0
   const dailyPrice = car?.daily_price == null ? null : Number(car.daily_price)
-  const deposit = Number(car?.deposit_amount) || (Number(car?.seats) >= 7 ? 10000 : 5000)
+  const deposit = 5000
 
   const totalHours = useMemo(() => {
     if (!slot) return 0
