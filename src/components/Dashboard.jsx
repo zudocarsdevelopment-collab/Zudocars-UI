@@ -1,3 +1,4 @@
+import './account-theme.css';
 import usePickupHubs from '../lib/usePickupHubs';
 import PickupHubs from './PickupHubs';
 import ThemeToggle from "./ThemeToggle";
@@ -564,7 +565,7 @@ export default function Dashboard() {
 
   if (!currentUser) return <div className="min-h-screen bg-slate-950" />;
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900">
+    <div className="account-theme dashboard-theme min-h-screen bg-[#f6f6f6] text-slate-900">
       <Sidebar
         tabs={tabs}
         active={tab}
@@ -588,7 +589,7 @@ export default function Dashboard() {
                 <Menu className="h-5 w-5" />
               </button>
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-700">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#ff4932]">
                   Zudocars Self-Drive
                 </p>
                 <h1 className="mt-1 text-xl font-black sm:text-2xl">
@@ -609,12 +610,12 @@ export default function Dashboard() {
               <button className="relative rounded-xl border border-slate-200 p-2.5 text-slate-500">
                 <Bell className="h-5 w-5" />
                 {pendingBookings > 0 && (
-                  <span className="absolute -right-1 -top-1 rounded-full bg-teal-700 px-1.5 text-[10px] font-black text-white">
+                  <span className="absolute -right-1 -top-1 rounded-full bg-[#ff4932] px-1.5 text-[10px] font-black text-white">
                     {pendingBookings}
                   </span>
                 )}
               </button>
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-100 font-black text-teal-800">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#ffede9] font-black text-[#ff4932]">
                 {(currentUser.name || currentUser.email || "Z")
                   .slice(0, 1)
                   .toUpperCase()}
@@ -763,12 +764,12 @@ function Sidebar({
         <button
           key={id}
           onClick={() => onSelect(id)}
-          className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${active === id ? "bg-teal-700 text-white shadow-lg shadow-teal-950/20" : "text-white/55 hover:bg-white/[0.06] hover:text-white"}`}
+          className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${active === id ? "bg-[#ff4932] text-white shadow-lg shadow-[#ff4932]/20" : "text-white/55 hover:bg-white/[0.06] hover:text-white"}`}
         >
           <Icon className="h-5 w-5" />
           {label}
           {badge > 0 && (
-            <span className="ml-auto rounded-full bg-teal-200 px-2 py-0.5 text-[10px] font-black text-teal-900">
+            <span className="ml-auto rounded-full bg-[#ffede9] px-2 py-0.5 text-[10px] font-black text-[#ff4932]">
               {badge}
             </span>
           )}
@@ -778,14 +779,14 @@ function Sidebar({
   );
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 flex-col bg-[#0f1115] px-5 py-6 text-white lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 flex-col bg-[#080808] px-5 py-6 text-white lg:flex">
         <Brand />
         {nav}
         <div className="mt-auto">
           <p className="truncate text-sm font-bold">
             {user.name || user.email}
           </p>
-          <p className="mt-1 text-xs capitalize text-teal-300">{user.role}</p>
+          <p className="mt-1 text-xs capitalize text-[#ff4932]">{user.role}</p>
           <button
             onClick={onSignOut}
             className="mt-5 flex items-center gap-2 text-sm text-white/55 hover:text-white"
@@ -801,7 +802,7 @@ function Sidebar({
         />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-[#0f1115] px-5 py-6 text-white transition-transform lg:hidden ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-[#080808] px-5 py-6 text-white transition-transform lg:hidden ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div className="flex items-center justify-between">
           <Brand />
@@ -824,7 +825,7 @@ function Brand() {
   return (
     <div>
       <p className="text-2xl font-black tracking-tight">
-        Zudo<span className="font-medium text-cyan-400">cars</span>
+        Zudo<span className="font-medium text-[#ff4932]">cars</span>
       </p>
       <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.18em] text-white/40">
         Self-Drive Kerala
@@ -872,12 +873,12 @@ function Overview({ cars, bookings, staff, onBookings, onFleet }) {
           <div
             key={label}
             onClick={onClick}
-            className={`db-reveal rounded-2xl border border-slate-200 bg-white p-5 shadow-sm ${onClick ? "cursor-pointer transition hover:border-teal-200 hover:shadow-md" : ""}`}
+            className={`db-reveal rounded-2xl border border-slate-200 bg-white p-5 shadow-sm ${onClick ? "cursor-pointer transition hover:border-[#ff4932] hover:shadow-md" : ""}`}
             style={{ animationDelay: `${index * 70}ms` }}
           >
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-slate-500">{label}</p>
-              <span className="rounded-xl bg-teal-50 p-2.5 text-teal-700">
+              <span className="rounded-xl bg-[#ffede9] p-2.5 text-[#ff4932]">
                 <Icon className="h-5 w-5" />
               </span>
             </div>
@@ -897,7 +898,7 @@ function Overview({ cars, bookings, staff, onBookings, onFleet }) {
             </div>
             <button
               onClick={onBookings}
-              className="text-sm font-bold text-teal-700"
+              className="text-sm font-bold text-[#ff4932]"
             >
               View all
             </button>
@@ -944,7 +945,7 @@ function Overview({ cars, bookings, staff, onBookings, onFleet }) {
           </p>
           <div className="mt-5 h-3 overflow-hidden rounded-full bg-slate-100">
             <div
-              className="h-full rounded-full bg-teal-600"
+              className="h-full rounded-full bg-[#ff4932]"
               style={{
                 width: `${cars.length ? (active / cars.length) * 100 : 0}%`,
               }}
@@ -956,7 +957,7 @@ function Overview({ cars, bookings, staff, onBookings, onFleet }) {
           </div>
           <button
             onClick={onFleet}
-            className="mt-5 text-sm font-bold text-teal-700"
+            className="mt-5 text-sm font-bold text-[#ff4932]"
           >
             View fleet →
           </button>
@@ -982,13 +983,13 @@ export function Toolbar({ title, subtitle, query, setQuery, onAdd, addLabel, chi
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search"
-            className="w-44 rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-teal-600"
+            className="w-44 rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-[#ff4932]"
           />
         </label>
         {onAdd && (
           <button
             onClick={onAdd}
-            className="flex items-center gap-2 rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-teal-800"
+            className="flex items-center gap-2 rounded-xl bg-[#ff4932] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#ff4932]"
           >
             <Plus className="h-4 w-4" /> {addLabel || "Add vehicle"}
           </button>
@@ -1002,7 +1003,7 @@ export function FilterSelect({ value, onChange, options, placeholder }) {
     <select
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-600 outline-none focus:border-teal-600"
+      className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-600 outline-none focus:border-[#ff4932]"
     >
       <option value="">{placeholder}</option>
       {options.map((option) => (
@@ -1099,7 +1100,7 @@ function Fleet({
                 onClick={() => onEdit(car)}
                 disabled={action === "fetchCar"}
                 title="Edit vehicle"
-                className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-slate-600 shadow-md backdrop-blur transition hover:bg-white hover:text-teal-700 disabled:opacity-60"
+                className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-slate-600 shadow-md backdrop-blur transition hover:bg-white hover:text-[#ff4932] disabled:opacity-60"
               >
                 {action === "fetchCar" ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -1116,14 +1117,14 @@ function Fleet({
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <Car className="h-16 w-16 text-teal-800/20" />
+                <Car className="h-16 w-16 text-[#ff4932]/20" />
               )}
             </div>
             <div className="p-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="font-black">{car.model || car.name}</h3>
-                  <p className="mt-1 text-xs font-bold uppercase tracking-wide text-teal-700">
+                  <p className="mt-1 text-xs font-bold uppercase tracking-wide text-[#ff4932]">
                     {car.plateNumber}
                   </p>
                   <p className="mt-1 text-xs text-slate-400">
@@ -1172,7 +1173,7 @@ function Fleet({
                   <button
                     onClick={() => onToggle(car)}
                     disabled={action === "updateCar"}
-                    className="flex-1 rounded-xl border border-slate-200 py-2.5 text-xs font-bold text-teal-700 disabled:opacity-60"
+                    className="flex-1 rounded-xl border border-slate-200 py-2.5 text-xs font-bold text-[#ff4932] disabled:opacity-60"
                   >
                     {car.active ? "Disable" : "Enable"}
                   </button>
@@ -1248,11 +1249,11 @@ function Bookings({
                   key={booking.id}
                   className={
                     booking.assignedEmail === currentUser.email
-                      ? "bg-teal-50/40"
+                      ? "bg-[#ffede9]/40"
                       : ""
                   }
                 >
-                  <td className="px-5 py-4 font-black text-teal-700">
+                  <td className="px-5 py-4 font-black text-[#ff4932]">
                     {booking.id}
                   </td>
                   <td className="px-5 py-4">
@@ -1277,7 +1278,7 @@ function Bookings({
                   <td className="px-5 py-4">
                     <StatusPill status={booking.status} />
                     {booking.assignedEmail === currentUser.email && (
-                      <span className="ml-2 rounded-full bg-teal-100 px-2 py-1 text-[10px] font-bold text-teal-800">
+                      <span className="ml-2 rounded-full bg-[#ffede9] px-2 py-1 text-[10px] font-bold text-[#ff4932]">
                         You
                       </span>
                     )}
@@ -1309,7 +1310,7 @@ function Bookings({
                     {booking.notes && <p className="mb-2 max-w-48 whitespace-pre-wrap text-xs text-slate-500">{booking.notes}</p>}
                     {booking.status === "Approved" && (
                       <div className="flex gap-2">
-                        <button disabled={!!action} onClick={() => onStatus(booking, "Completed")} className="text-teal-700">Complete</button>
+                        <button disabled={!!action} onClick={() => onStatus(booking, "Completed")} className="text-[#ff4932]">Complete</button>
                         <button disabled={!!action} onClick={() => onStatus(booking, "Rejected")} className="text-red-600">Cancel</button>
                       </div>
                     )}
@@ -1318,7 +1319,7 @@ function Bookings({
                         <button
                           onClick={() => onStatus(booking, "Approved")}
                           disabled={action === "updateBookingStatus"}
-                          className="rounded-lg p-2 text-teal-700 hover:bg-teal-50"
+                          className="rounded-lg p-2 text-[#ff4932] hover:bg-[#ffede9]"
                         >
                           <Check className="h-4 w-4" />
                         </button>
@@ -1353,7 +1354,7 @@ function Staff({ staff, query, setQuery, onEdit, onStatus, onDelete, action }) {
   return (
     <div className="space-y-6">
       <Toolbar title="Staff directory" query={query} setQuery={setQuery} />
-      <button onClick={() => onEdit({ name: '', email: '', phone: '', employeeId: '', department: '', role: 'staff', status: 'Pending' })} className="rounded-xl bg-teal-700 px-4 py-2 text-white">Add staff member</button>
+      <button onClick={() => onEdit({ name: '', email: '', phone: '', employeeId: '', department: '', role: 'staff', status: 'Pending' })} className="rounded-xl bg-[#ff4932] px-4 py-2 text-white">Add staff member</button>
       <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
         {filtered.map((member) => (
           <article
@@ -1362,12 +1363,12 @@ function Staff({ staff, query, setQuery, onEdit, onStatus, onDelete, action }) {
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-100 font-black text-teal-800">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#ffede9] font-black text-[#ff4932]">
                   {member.name?.slice(0, 1)}
                 </div>
                 <div>
                   <h3 className="font-black">{member.name}</h3>
-                  <p className="text-xs capitalize text-teal-700">
+                  <p className="text-xs capitalize text-[#ff4932]">
                     {member.role} · {member.department}
                   </p>
                 </div>
@@ -1386,7 +1387,7 @@ function Staff({ staff, query, setQuery, onEdit, onStatus, onDelete, action }) {
                   <button
                     onClick={() => onStatus(member, "Approved")}
                     disabled={action === "updateUserStatus"}
-                    className="flex-1 rounded-xl bg-teal-700 py-2.5 text-xs font-bold text-white"
+                    className="flex-1 rounded-xl bg-[#ff4932] py-2.5 text-xs font-bold text-white"
                   >
                     Approve
                   </button>
@@ -1421,9 +1422,9 @@ function Staff({ staff, query, setQuery, onEdit, onStatus, onDelete, action }) {
 export function StatusPill({ status }) {
   const colors = {
     Pending: "bg-amber-50 text-amber-700",
-    Approved: "bg-teal-50 text-teal-700",
+    Approved: "bg-[#ffede9] text-[#ff4932]",
     Rejected: "bg-red-50 text-red-600",
-    Active: "bg-teal-50 text-teal-700",
+    Active: "bg-[#ffede9] text-[#ff4932]",
     Inactive: "bg-slate-100 text-slate-500",
   };
   return (
@@ -1459,7 +1460,7 @@ function AlertBanner({ message, onClose }) {
 }
 function SuccessBanner({ message, onClose }) {
   return (
-    <div className="fixed right-5 top-24 z-[70] flex w-[min(420px,calc(100vw-2rem))] items-start gap-3 rounded-2xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-700 shadow-lg shadow-teal-900/10">
+    <div className="fixed right-5 top-24 z-[70] flex w-[min(420px,calc(100vw-2rem))] items-start gap-3 rounded-2xl border border-[#ff4932] bg-[#ffede9] px-4 py-3 text-sm text-[#ff4932] shadow-lg shadow-[#ff4932]/10">
       <Check className="h-5 w-5 shrink-0" />
       <span className="flex-1">{message}</span>
       <button className="ml-auto" onClick={onClose}>
@@ -1501,7 +1502,7 @@ function ModalActions({ onClose, onConfirm, loading, label }) {
       <button
         onClick={onConfirm}
         disabled={loading}
-        className="flex items-center gap-2 rounded-xl bg-teal-700 px-5 py-2.5 text-sm font-bold text-white hover:bg-teal-800 disabled:opacity-60"
+        className="flex items-center gap-2 rounded-xl bg-[#ff4932] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#ff4932] disabled:opacity-60"
       >
         {loading && <Loader2 className="h-4 w-4 animate-spin" />}
         {label}
@@ -1546,7 +1547,7 @@ function CarFormModal({ car, onClose, onSave, loading }) {
             <input
               value={form[field] ?? ""}
               onChange={(event) => update(field, event.target.value)}
-              className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-teal-600"
+              className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#ff4932]"
             />
           </label>
         ))}
@@ -1579,7 +1580,7 @@ function CarFormModal({ car, onClose, onSave, loading }) {
           <input
             value={form.features}
             onChange={(event) => update("features", event.target.value)}
-            className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-teal-600"
+            className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#ff4932]"
           />
         </label>
         <label className="flex items-center gap-2 text-sm font-semibold sm:col-span-2">
@@ -1587,7 +1588,7 @@ function CarFormModal({ car, onClose, onSave, loading }) {
             type="checkbox"
             checked={Boolean(form.active)}
             onChange={(event) => update("active", event.target.checked)}
-            className="h-4 w-4 accent-teal-700"
+            className="h-4 w-4 accent-[#ff4932]"
           />{" "}
           Active and bookable
         </label>
@@ -1632,7 +1633,7 @@ function StaffFormModal({ member, onClose, onSave, loading }) {
             <input
               value={form[field] || ""}
               onChange={(event) => update(field, event.target.value)}
-              className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-teal-600"
+              className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#ff4932]"
             />
           </label>
         ))}
@@ -1665,7 +1666,7 @@ function Select({ label, value, options, onChange }) {
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-teal-600"
+        className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-[#ff4932]"
       >
         {options.map((option) => (
           <option key={option}>{option}</option>
@@ -1697,7 +1698,7 @@ function AdminKeyModal({ action, onClose, onVerified }) {
   const [key, setKey] = useState("");
   return (
     <Modal title="Admin verification" onClose={onClose}>
-      <div className="flex gap-3 rounded-2xl bg-teal-50 p-4 text-sm text-teal-800">
+      <div className="flex gap-3 rounded-2xl bg-[#ffede9] p-4 text-sm text-[#ff4932]">
         <ShieldCheck className="h-5 w-5 shrink-0" />
         <p>
           Enter the admin key to {action}. It will be saved in this session as{" "}
@@ -1711,7 +1712,7 @@ function AdminKeyModal({ action, onClose, onVerified }) {
         onChange={(event) => setKey(event.target.value)}
         onKeyDown={(event) => event.key === "Enter" && key && onVerified(key)}
         placeholder="Admin secret key"
-        className="mt-5 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-teal-600"
+        className="mt-5 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#ff4932]"
       />
       <ModalActions
         onClose={onClose}
@@ -1780,3 +1781,4 @@ async function updateLocalBooking(reference, payload) {
   if (!response.ok) throw new Error(data.detail || data.error || JSON.stringify(data));
   return data;
 }
+
