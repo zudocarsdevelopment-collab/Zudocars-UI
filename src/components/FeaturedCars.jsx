@@ -1,5 +1,5 @@
 import { apiUrl } from "../lib/apiConfig";
-import { vehicleImageUrl } from '../lib/vehicleImage'
+import { vehicleImageUrl, handleVehicleImageError } from '../lib/vehicleImage'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Star, Users, Fuel, Settings2 } from 'lucide-react'
@@ -85,7 +85,8 @@ export default function FleetPage() {
                     <img
                       src={image}
                       alt={car.category}
-                      onError={(e) => { e.currentTarget.src = FALLBACK_IMAGE }}
+                      referrerPolicy="no-referrer"
+                      onError={(e) => handleVehicleImageError(e, car)}
                       className="w-full h-52 object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <span className={`absolute top-4 left-4 ${badge.color} text-white text-xs font-semibold px-3 py-1 rounded-full`}>

@@ -1,5 +1,5 @@
 import { apiUrl } from "../lib/apiConfig";
-import { vehicleImageUrl } from '../lib/vehicleImage'
+import { vehicleImageUrl, handleVehicleImageError } from '../lib/vehicleImage'
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { X, MapPin, User, Phone, CheckCircle2, ChevronLeft, ShieldCheck, Navigation } from 'lucide-react'
 import TermsModal from './TermsModal'
@@ -195,7 +195,7 @@ export default function BookingModal({ car, slot, onClose }) {
         ) : (
           <>
             <div className="flex items-center gap-4 p-5 pb-4 border-b border-gray-100">
-              <img src={image} alt={car.category} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
+              <img src={image} alt={car.category} referrerPolicy="no-referrer" onError={(e) => handleVehicleImageError(e, car)} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Booking request</p>
                 <h3 className="text-lg font-bold text-gray-900 truncate">{car.category}</h3>

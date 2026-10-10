@@ -3,7 +3,7 @@ import usePickupHubs from '../lib/usePickupHubs';
 import PickupHubs from './PickupHubs';
 import ThemeToggle from "./ThemeToggle";
 import { apiUrl } from "../lib/apiConfig";
-import { vehicleImageUrl } from '../lib/vehicleImage'
+import { vehicleImageUrl, handleVehicleImageError } from '../lib/vehicleImage'
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -270,6 +270,9 @@ function carToApiPayload(car) {
     location_base: car.locationBase || "",
     location_current: car.locationCurrent || "",
     photo_url: car.image || "",
+    // Replacing the photo URL must also stop the previous upload from
+    // overriding the newly selected photo on the public website.
+    ...(car._raw && car.image !== vehicleImageUrl(car._raw) ? { vehicle_image: null } : {}),
     is_active: Boolean(car.active),
   };
 }
@@ -1114,6 +1117,8 @@ function Fleet({
               {car.image ? (
                 <img
                   src={car.image}
+                  referrerPolicy="no-referrer"
+                  onError={(e) => handleVehicleImageError(e, car._raw || car)}
                   alt={`${car.name} ${car.model}`}
                   className="h-full w-full object-cover"
                 />

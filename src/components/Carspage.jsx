@@ -1,5 +1,5 @@
 import usePickupHubs from '../lib/usePickupHubs'
-import { vehicleImageUrl } from '../lib/vehicleImage'
+import { vehicleImageUrl, vehicleImageSources, handleVehicleImageError } from '../lib/vehicleImage'
 import './car-search.css'
 import { apiUrl } from "../lib/apiConfig";
 import { useState, useMemo, useEffect } from 'react'
@@ -97,6 +97,7 @@ function normalizeCar(raw) {
       : '—',
     year: raw.year || 2026,
     image: vehicleImageUrl(raw),
+    imageSources: vehicleImageSources(raw),
   }
 }
 
@@ -388,9 +389,8 @@ function CarCard({ car, onBook }) {
         <img
           src={car.image}
           alt={car.name}
-          onError={(e) => {
-            e.currentTarget.src = FALLBACK_IMAGE
-          }}
+          referrerPolicy="no-referrer"
+          onError={(e) => handleVehicleImageError(e, car)}
           className="w-full h-52 object-cover group-hover:scale-105 transition-transform duration-500"
         />
         <span className="absolute top-4 left-4 bg-blue-600 text-white text-xs font-semibold px-3 py-1 rounded-full">
@@ -636,7 +636,8 @@ function BookingModal({ car, searchParams, onClose }) {
               <img
                 src={car.image}
                 alt={car.name}
-                onError={(e) => (e.currentTarget.src = FALLBACK_IMAGE)}
+                referrerPolicy="no-referrer"
+                onError={(e) => handleVehicleImageError(e, car)}
                 className="w-full h-44 object-cover rounded-xl mb-4"
               />
               <h3 className="text-lg font-bold text-gray-900">{car.name}</h3>
