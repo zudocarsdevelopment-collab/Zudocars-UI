@@ -46,7 +46,7 @@ export default function RentalHero() {
       initial={false}
       animate={{ color: '#ffffff' }}
       transition={{ duration: reduceMotion ? 0 : 1.2, ease: 'easeInOut' }}
-    ><span style={{ color: 'var(--orange)' }}>Rent</span>{' a car in '}<span style={{ color: 'var(--orange)' }}>Kerala</span></motion.h1><p className="rental-subtitle">Find your next drive<br/>with Zudo Cars</p>
+    ><span style={{ color: '#ffffff' }}>Rent a car in</span>{' '}<span style={{ color: 'var(--orange)' }}>Kerala</span></motion.h1><p className="rental-subtitle">Find your next drive<br/>with Zudo Cars</p>
     <div className="rental-tabs" aria-label="Rental period"><button type="button" aria-pressed={!monthly} className={!monthly?'selected':''} onClick={()=>selectPeriod(false)}>Daily rentals</button><button type="button" aria-pressed={monthly} className={monthly?'selected':''} onClick={()=>selectPeriod(true)}>Monthly rentals</button></div>
     <form className="rental-search" onSubmit={search}>
       <label className="location-field"><MapPin size={25}/><span><span className="field-caption">Pickup location</span><select aria-label="Pickup location" value={pickup} onChange={e=>setPickup(e.target.value)} required><option value="" disabled>{hubs.length?'Choose location':'Choose pickup location'}</option>{hubs.map(h=><option key={h.id} value={h.id}>{h.name}</option>)}</select></span></label>
