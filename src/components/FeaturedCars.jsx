@@ -50,7 +50,7 @@ export default function FleetPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
         <div className="mb-10">
           <span className="text-blue-600 text-sm font-semibold tracking-wide uppercase">Our fleet</span>
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mt-3 mb-2">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mt-3 mb-2">
             Available for your dates
           </h2>
         </div>
