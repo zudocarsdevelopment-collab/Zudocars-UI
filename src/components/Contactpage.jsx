@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import '../pages/home.css'
+import './contact.css'
+import usePickupHubs from '../lib/usePickupHubs'
 import {
   Phone,
   Mail,
@@ -8,7 +11,6 @@ import {
   MessageCircle,
   ExternalLink,
   ChevronDown,
-  Sparkles,
 } from 'lucide-react'
 
 const contactInfo = [
@@ -19,8 +21,8 @@ const contactInfo = [
     sub: 'Available 24/7 for booking support',
     href: 'tel:+918111946664',
     actionText: 'Call now',
-    color: 'text-blue-600',
-    bg: 'bg-blue-50',
+    color: 'text-[#ff4932]',
+    bg: 'bg-[#ff4932]/10',
   },
   {
     icon: MessageCircle,
@@ -83,6 +85,7 @@ const faqs = [
 ]
 
 export default function ContactPage() {
+  const { hubs, error: hubError, loading: hubsLoading } = usePickupHubs()
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -107,18 +110,18 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-24 lg:pt-28 font-sans">
+    <div className="rental-home contact-home">
       {/* Page Header */}
-      <div className="bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+      <div className="contact-hero">
+        <img className="contact-hero-image" src="https://www.motorbeam.com/wp-content/uploads/2018-Volkswagen-Virtus-Front-And-Side.jpg" alt="Volkswagen Virtus viewed from the front and side" fetchPriority="high" />
+        <div className="contact-container">
           <div className="flex items-center gap-2 mb-3">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
-              <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#ff4932]/10 text-[#ff4932] border border-[#ff4932]/20">
               We're here to help
             </span>
           </div>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tight mb-3">
-            Get in Touch with Zudo Cars
+            Talk to us about your next drive.
           </h1>
           <p className="text-gray-500 text-sm sm:text-base max-w-2xl leading-relaxed">
             Have questions about booking a car, airport pickups, long-term rentals, or need immediate roadside support?
@@ -128,7 +131,7 @@ export default function ContactPage() {
       </div>
 
       {/* Main Content Area */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+      <div className="contact-container">
         {/* Quick Contact Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mb-10 sm:mb-14">
           {contactInfo.map(({ icon: Icon, label, value, sub, href, actionText, color, bg }) => (
@@ -137,21 +140,21 @@ export default function ContactPage() {
               href={href}
               target={href.startsWith('http') ? '_blank' : undefined}
               rel={href.startsWith('http') ? 'noopener noreferrer' : undefined}
-              className="group bg-white rounded-2xl border border-gray-200/80 p-5 sm:p-6 shadow-sm hover:shadow-md hover:border-blue-400 transition-all duration-200 flex flex-col justify-between"
+              className="contact-card group flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <div className={`w-11 h-11 rounded-xl ${bg} flex items-center justify-center`}>
                     <Icon className={`w-5 h-5 ${color}`} />
                   </div>
-                  <span className="text-[11px] font-semibold text-gray-400 group-hover:text-blue-600 flex items-center gap-1 transition-colors">
+                  <span className="text-[11px] font-semibold text-gray-400 group-hover:text-[#ff4932] flex items-center gap-1 transition-colors">
                     {actionText} <ExternalLink className="w-3 h-3" />
                   </span>
                 </div>
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">
                   {label}
                 </p>
-                <p className="text-base font-bold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors">
+                <p className="text-base font-bold text-gray-900 mb-1 group-hover:text-[#ff4932] transition-colors">
                   {value}
                 </p>
                 <p className="text-xs text-gray-500 leading-relaxed">{sub}</p>
@@ -163,7 +166,7 @@ export default function ContactPage() {
         {/* 2-Column Split: Form (Left) & Support Sidebar (Right) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Left Column: Contact Form (col-span-7) */}
-          <div className="lg:col-span-7 bg-white rounded-3xl border border-gray-200/80 p-6 sm:p-8 shadow-sm">
+          <div className="contact-form-panel lg:col-span-7 p-6 sm:p-8">
             {submitted ? (
               <div className="flex flex-col items-center justify-center text-center py-16 px-4">
                 <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mb-5 ring-8 ring-emerald-50/50">
@@ -180,7 +183,7 @@ export default function ContactPage() {
                     setSubmitted(false)
                     setForm({ name: '', email: '', phone: '', topic: topics[0], message: '' })
                   }}
-                  className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold transition-all shadow-md shadow-blue-600/20"
+                  className="px-6 py-2.5 rounded-xl bg-[#ff4932] hover:bg-[#e63823] text-white text-xs sm:text-sm font-semibold transition-all shadow-md shadow-none"
                 >
                   Send Another Message
                 </button>
@@ -208,7 +211,7 @@ export default function ContactPage() {
                       placeholder="e.g. Rahul Sharma"
                       value={form.name}
                       onChange={update('name')}
-                      className="w-full h-11 px-3.5 rounded-xl border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
+                      className="w-full h-11 px-3.5 rounded-xl border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#ff4932]/20 focus:border-[#ff4932] transition-all"
                     />
                   </div>
                   <div>
@@ -221,7 +224,7 @@ export default function ContactPage() {
                       placeholder="e.g. +91 81119 46664"
                       value={form.phone}
                       onChange={update('phone')}
-                      className="w-full h-11 px-3.5 rounded-xl border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
+                      className="w-full h-11 px-3.5 rounded-xl border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#ff4932]/20 focus:border-[#ff4932] transition-all"
                     />
                   </div>
                 </div>
@@ -237,7 +240,7 @@ export default function ContactPage() {
                     placeholder="e.g. rahul@example.com"
                     value={form.email}
                     onChange={update('email')}
-                    className="w-full h-11 px-3.5 rounded-xl border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all"
+                    className="w-full h-11 px-3.5 rounded-xl border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#ff4932]/20 focus:border-[#ff4932] transition-all"
                   />
                 </div>
 
@@ -254,8 +257,8 @@ export default function ContactPage() {
                         onClick={() => setForm((prev) => ({ ...prev, topic: t }))}
                         className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
                           form.topic === t
-                            ? 'bg-blue-600 border-blue-600 text-white shadow-sm shadow-blue-600/20'
-                            : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'
+                            ? 'bg-[#ff4932] border-[#ff4932] text-white shadow-sm shadow-none'
+                            : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-[#ff4932] hover:text-[#ff4932]'
                         }`}
                       >
                         {t}
@@ -275,7 +278,7 @@ export default function ContactPage() {
                     placeholder="Tell us your rental dates, preferred vehicle, pickup location, or any specific requirements..."
                     value={form.message}
                     onChange={update('message')}
-                    className="w-full p-3.5 rounded-xl border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all resize-none"
+                    className="w-full p-3.5 rounded-xl border border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#ff4932]/20 focus:border-[#ff4932] transition-all resize-none"
                   />
                 </div>
 
@@ -283,7 +286,7 @@ export default function ContactPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full sm:w-auto min-w-[180px] h-12 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 rounded-xl text-sm font-semibold transition-all shadow-md shadow-blue-600/25 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto min-w-[180px] h-12 flex items-center justify-center gap-2 bg-[#ff4932] hover:bg-[#e63823] text-white px-8 rounded-xl text-sm font-semibold transition-all shadow-md shadow-none disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {submitting ? (
                     <span>Sending message...</span>
@@ -301,7 +304,7 @@ export default function ContactPage() {
           {/* Right Column: Support & FAQs (col-span-5) */}
           <div className="lg:col-span-5 space-y-6">
             {/* WhatsApp Fast Support Card */}
-            <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-3xl p-6 sm:p-7 text-white shadow-lg shadow-emerald-700/20">
+            <div className="contact-support rounded-3xl p-6 sm:p-7 text-white">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-md flex items-center justify-center">
                   <MessageCircle className="w-5 h-5 text-white" />
@@ -326,33 +329,25 @@ export default function ContactPage() {
             </div>
 
             {/* Operating Hubs Card */}
-            <div className="bg-white rounded-3xl border border-gray-200/80 p-6 shadow-sm">
+            <div className="contact-panel p-6">
               <div className="flex items-center gap-2.5 mb-3.5">
-                <MapPin className="w-5 h-5 text-blue-600" />
+                <MapPin className="w-5 h-5 text-[#ff4932]" />
                 <h3 className="text-base font-bold text-gray-900">Kerala Hub Locations</h3>
               </div>
               <div className="space-y-2.5 text-xs text-gray-600">
-                <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-between">
-                  <span className="font-semibold text-gray-800">Cochin International Airport (COK)</span>
-                  <span className="text-[10px] text-blue-600 font-medium bg-blue-50 px-2 py-0.5 rounded">24/7 Hub</span>
-                </div>
-                <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-between">
-                  <span className="font-semibold text-gray-800">Edapally (Near Lulu Mall)</span>
-                  <span className="text-[10px] text-gray-500 font-medium">Pickup & Drop</span>
-                </div>
-                <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-between">
-                  <span className="font-semibold text-gray-800">JLN Stadium Hub (Kaloor)</span>
-                  <span className="text-[10px] text-gray-500 font-medium">Central Yard</span>
-                </div>
-                <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-between">
-                  <span className="font-semibold text-gray-800">Ernakulam Junction (South Station)</span>
-                  <span className="text-[10px] text-gray-500 font-medium">Station Hub</span>
-                </div>
+                {hubsLoading && <p role="status">Loading locations...</p>}
+                {hubError && <p role="alert">{hubError} Please contact our team for pickup details.</p>}
+                {!hubsLoading && !hubError && hubs.length === 0 && <p>No pickup locations are available yet. Please contact our team.</p>}
+                {hubs.map(hub => <div key={hub.id} className="p-2.5 rounded-xl bg-gray-50 border border-gray-100">
+                  <span className="font-semibold text-gray-800">{hub.name}</span>
+                  {hub.city && <p className="text-gray-500 mt-1">{hub.city}</p>}
+                  {hub.address && <p className="text-gray-500 mt-1">{hub.address}</p>}
+                </div>)}
               </div>
             </div>
 
             {/* Frequently Asked Questions */}
-            <div className="bg-white rounded-3xl border border-gray-200/80 p-6 shadow-sm">
+            <div className="contact-panel p-6">
               <h3 className="text-base font-bold text-gray-900 mb-4">
                 Frequently Asked Questions
               </h3>
@@ -367,12 +362,12 @@ export default function ContactPage() {
                       <button
                         type="button"
                         onClick={() => setOpenFaq(isOpen ? -1 : index)}
-                        className="w-full px-4 py-3.5 text-left flex items-center justify-between gap-3 text-xs font-semibold text-gray-800 hover:text-blue-600 transition-colors"
+                        className="w-full px-4 py-3.5 text-left flex items-center justify-between gap-3 text-xs font-semibold text-gray-800 hover:text-[#ff4932] transition-colors"
                       >
                         <span>{faq.q}</span>
                         <ChevronDown
                           className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${
-                            isOpen ? 'rotate-180 text-blue-600' : ''
+                            isOpen ? 'rotate-180 text-[#ff4932]' : ''
                           }`}
                         />
                       </button>
