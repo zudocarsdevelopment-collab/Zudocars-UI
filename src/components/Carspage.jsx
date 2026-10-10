@@ -1,4 +1,5 @@
 import usePickupHubs from '../lib/usePickupHubs'
+import { vehicleImageUrl } from '../lib/vehicleImage'
 import './car-search.css'
 import { apiUrl } from "../lib/apiConfig";
 import { useState, useMemo, useEffect } from 'react'
@@ -95,7 +96,7 @@ function normalizeCar(raw) {
       ? raw.transmission.charAt(0) + raw.transmission.slice(1).toLowerCase()
       : '—',
     year: raw.year || 2026,
-    image: raw.image || raw.vehicle_image || raw.photo_url || FALLBACK_IMAGE,
+    image: vehicleImageUrl(raw),
   }
 }
 

@@ -1,4 +1,5 @@
 import { apiUrl } from "../lib/apiConfig";
+import { vehicleImageUrl } from '../lib/vehicleImage'
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { X, MapPin, User, Phone, CheckCircle2, ChevronLeft, ShieldCheck, Navigation } from 'lucide-react'
 import TermsModal from './TermsModal'
@@ -177,8 +178,7 @@ export default function BookingModal({ car, slot, onClose }) {
 
   if (!car || !slot) return null
 
-  const image = car.vehicle_image || car.photo_url ||
-    'https://images.unsplash.com/photo-1494905998402-395d579af36f?w=600&h=400&fit=crop'
+  const image = vehicleImageUrl(car)
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" aria-label={`Book ${car.category}`}>

@@ -1,4 +1,5 @@
 import { apiUrl } from "../lib/apiConfig";
+import { vehicleImageUrl } from '../lib/vehicleImage'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Star, Users, Fuel, Settings2 } from 'lucide-react'
@@ -72,7 +73,7 @@ export default function FleetPage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {cars.slice(0, 12).map((car) => {
               const badge = getBadge(car)
-              const image = car.vehicle_image || car.photo_url || FALLBACK_IMAGE
+              const image = vehicleImageUrl(car)
               const priceValue = Number(car.hourly_rate) || 0
 
               return (

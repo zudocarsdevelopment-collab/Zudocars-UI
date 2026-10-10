@@ -3,6 +3,7 @@ import usePickupHubs from '../lib/usePickupHubs';
 import PickupHubs from './PickupHubs';
 import ThemeToggle from "./ThemeToggle";
 import { apiUrl } from "../lib/apiConfig";
+import { vehicleImageUrl } from '../lib/vehicleImage'
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -234,7 +235,7 @@ function mapVehicle(v) {
     pickupHub: v.pickup_hub,
     locationBase: v.pickup_hub_name || v.location_base || "—",
     locationCurrent: v.location_current || "",
-    image: v.photo_url || v.vehicle_image || "",
+    image: v.vehicle_image || v.photo_url ? vehicleImageUrl(v) : "",
     dateAdded: v.date_added || "",
     rating: 4.8,
     // Reflects the backend's is_active flag once that column exists;
