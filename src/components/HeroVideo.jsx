@@ -18,13 +18,11 @@ export default function HeroVideo({ reduceMotion }) {
   const host = useRef(null)
   const player = useRef(null)
   const [visible, setVisible] = useState(false)
-  const [paused, setPaused] = useState(false)
-  const [ready, setReady] = useState(false)
   const [failed, setFailed] = useState(false)
   useEffect(() => {
     if (reduceMotion) return
     let disposed = false
-    setVisible(false); setReady(false); setFailed(false); setPaused(false)
+    setVisible(false); setFailed(false)
     loadApi().then(YT => {
       if (disposed) return
       const target = document.createElement('div')
@@ -38,12 +36,11 @@ export default function HeroVideo({ reduceMotion }) {
             const iframe = event.target.getIframe()
             iframe.setAttribute('tabindex', '-1')
             iframe.setAttribute('title', 'Zudo Cars background video')
-            event.target.mute(); event.target.playVideo(); setReady(true)
+            event.target.mute(); event.target.playVideo()
           },
           onStateChange: event => {
             if (disposed) return
-            if (event.data === YT.PlayerState.PLAYING) { setVisible(true); setPaused(false) }
-            if (event.data === YT.PlayerState.PAUSED) setPaused(true)
+            if (event.data === YT.PlayerState.PLAYING) setVisible(true)
           },
           onError: () => { if (!disposed) { setFailed(true); setVisible(false) } },
         },
@@ -52,11 +49,5 @@ export default function HeroVideo({ reduceMotion }) {
     return () => { disposed = true; player.current?.destroy(); player.current = null }
   }, [reduceMotion])
   if (reduceMotion) return null
-  return <>
-    <div ref={host} className={`rental-hero-video${visible && !failed ? ' is-playing' : ''}`} aria-hidden="true" />
-    {ready && !failed && <button type="button" className="rental-slideshow-toggle" onClick={() => {
-      if (visible && !paused) player.current?.pauseVideo()
-      else { player.current?.mute(); player.current?.playVideo() }
-    }}>{visible && !paused ? 'Pause video' : 'Play video'}</button>}
-  </>
+  return <div ref={host} className={`rental-hero-video${visible && !failed ? ' is-playing' : ''}`} aria-hidden="true" />
 }

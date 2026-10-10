@@ -255,7 +255,7 @@ function mapVehicle(v) {
 function carToApiPayload(car) {
   const normalizedBodyType = normalizeBodyType(car.bodyType || "");
   return {
-    external_id: car.externalId ?? "",
+    ...(car.externalId ? { external_id: car.externalId } : {}),
     plate_number: car.plateNumber || "",
     category: car.model || car.category || "",
     sub_category: car.subCategory || "",
@@ -391,7 +391,7 @@ export default function Dashboard() {
   const tabs = [
     { id: "overview", label: "Overview", icon: BarChart3 },
     { id: "fleet", label: "Fleet", icon: Car },
-    { id: "hubs", label: "Pickup Hubs", icon: MapPin },
+    { id: "hubs", label: "Locations & Hubs", icon: MapPin },
     { id: "maintenance", label: "Maintenance", icon: Wrench },
     { id: "services", label: "Service Management", icon: ClipboardList },
     {
