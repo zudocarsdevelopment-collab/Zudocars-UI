@@ -92,6 +92,8 @@ function normalizeCar(raw) {
     // "0" on the PDF) until the real field name is confirmed with backend.
     extraKmCharge: Number(raw.extra_km_charge ?? raw.extra_km_rate ?? raw.km_extra_charge ?? 0) || 0,
     availableStock: raw.available_stock,
+    expectedReturnAt: raw.expected_return_at,
+    unavailableReason: raw.unavailable_reason,
     transmission: raw.transmission
       ? raw.transmission.charAt(0) + raw.transmission.slice(1).toLowerCase()
       : '—',
@@ -398,7 +400,7 @@ function CarCard({ car, onBook }) {
         </span>
         {car.availableStock !== undefined && (
           <span className="absolute top-4 right-4 bg-gray-900/80 backdrop-blur-md text-white text-xs font-medium px-2.5 py-1 rounded-full">
-            Stock: {car.availableStock}
+            {car.availableStock > 0 ? 'Available' : 'Unavailable'}
           </span>
         )}
       </div>
@@ -442,12 +444,22 @@ function CarCard({ car, onBook }) {
             )}
           </div>
           <button
+            disabled={car.availableStock === 0}
             onClick={() => onBook(car)}
-            className="bg-[#047857] text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#065f46] transition-colors"
+            className="bg-[#047857] text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#065f46] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Book Now
+            {car.availableStock === 0 ? 'Unavailable' : 'Book Now'}
           </button>
         </div>
+        {car.availableStock === 0 && (
+          <p className="mt-3 text-sm text-gray-600">
+            {car.expectedReturnAt && new Date(car.expectedReturnAt) > new Date()
+              ? `Expected back ${new Date(car.expectedReturnAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}. Available to book once the return is confirmed.`
+              : car.unavailableReason === 'awaiting_return'
+                ? 'Awaiting vehicle return. Booking will reopen once the return is confirmed.'
+                : 'Please contact our team for availability and pricing.'}
+          </p>
+        )}
       </div>
     </div>
   )
@@ -933,7 +945,7 @@ export default function CarsPage() {
       date_to: paramsToUse.date_to, time_to: paramsToUse.time_to,
       pickup_location_id: paramsToUse.pickup_location_id,
       dropoff_location_id: paramsToUse.dropoff_location_id,
-      vehicle_type: paramsToUse.vehicle_type, include_unavailable: false,
+      vehicle_type: paramsToUse.vehicle_type, include_unavailable: true,
     }
 
     console.log('[CarsPage] fetching available vehicles', payload)
