@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { apiUrl, dashboardHeaders } from '../lib/apiConfig'
+import { readApiJson } from '../lib/apiResponse'
+import DeleteConfirmation from './DeleteConfirmation'
 
 const emptyHub = { name: '', location: '', city: '', address: '', phone: '', is_active: true }
 const emptyLocation = { name: '', is_active: true }
@@ -11,13 +13,14 @@ export default function PickupHubs() {
   const [form, setForm] = useState(emptyHub)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
   async function load() {
     const response = await fetch(apiUrl('/api/pickup-hubs/?include_inactive=1'), { headers: dashboardHeaders() })
-    if (!response.ok) throw new Error('Unable to load hubs.')
-    setHubs(await response.json())
+    setHubs(await readApiJson(response, 'Unable to load hubs.'))
     const locationResponse = await fetch(apiUrl('/api/locations/?include_inactive=1'), { headers: dashboardHeaders() })
-    if (!locationResponse.ok) throw new Error('Unable to load locations.')
-    setLocations(await locationResponse.json())
+    setLocations(await readApiJson(locationResponse, 'Unable to load locations.'))
   }
   useEffect(() => { load().catch((error) => setError(error.message)) }, [])
   async function saveLocation(event) {
@@ -26,20 +29,36 @@ export default function PickupHubs() {
       const response = await fetch(apiUrl(`/api/locations/${locationForm.id ? `${locationForm.id}/` : ''}`), {
         method: locationForm.id ? 'PATCH' : 'POST', headers: dashboardHeaders(), body: JSON.stringify(locationForm),
       })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || data.detail || Object.values(data).flat().join(' '))
+      await readApiJson(response, 'Unable to save location.')
       setLocationForm(emptyLocation); await load()
     } catch (error) { setError(error.message) }
     finally { setLocationSaving(false) }
   }
-  async function removeLocation(location) {
-    if (!window.confirm(`Delete location ${location.name}?`)) return
+  function requestDelete(item, kind) {
+    setDeleteError('')
+    setDeleteTarget({ item, kind })
+  }
+  async function confirmDelete() {
+    if (deleting || !deleteTarget) return
+    const { item, kind } = deleteTarget
+    setDeleting(true)
+    setDeleteError('')
     setError('')
     try {
-      const response = await fetch(apiUrl(`/api/locations/${location.id}/`), { method: 'DELETE', headers: dashboardHeaders() })
-      if (!response.ok) { const data = await response.json(); throw new Error(data.error || data.detail || 'Unable to delete location.') }
-      await load()
-    } catch (error) { setError(error.message) }
+      const resource = kind === 'location' ? 'locations' : 'pickup-hubs'
+      const response = await fetch(apiUrl(`/api/${resource}/${item.id}/`), { method: 'DELETE', headers: dashboardHeaders() })
+      if (!response.ok) await readApiJson(response, `Unable to delete ${kind}.`)
+      if (kind === 'location') {
+        setLocations(current => current.filter(location => location.id !== item.id))
+        if (locationForm.id === item.id) setLocationForm(emptyLocation)
+      } else {
+        setHubs(current => current.filter(hub => hub.id !== item.id))
+        if (form.id === item.id) setForm(emptyHub)
+      }
+      setDeleteTarget(null)
+      await load().catch(error => setError(error.message))
+    } catch (error) { setDeleteError(error.message) }
+    finally { setDeleting(false) }
   }
   async function save(event) {
     event.preventDefault(); setSaving(true); setError('')
@@ -47,20 +66,10 @@ export default function PickupHubs() {
       const response = await fetch(apiUrl(`/api/pickup-hubs/${form.id ? `${form.id}/` : ''}`), {
         method: form.id ? 'PATCH' : 'POST', headers: dashboardHeaders(), body: JSON.stringify(form),
       })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || data.detail || JSON.stringify(data))
+      await readApiJson(response, 'Unable to save hub.')
       setForm(emptyHub); await load()
     } catch (error) { setError(error.message) }
     finally { setSaving(false) }
-  }
-  async function remove(hub) {
-    if (!window.confirm(`Delete pickup hub ${hub.name}?`)) return
-    setError('')
-    try {
-      const response = await fetch(apiUrl(`/api/pickup-hubs/${hub.id}/`), { method: 'DELETE', headers: dashboardHeaders() })
-      if (!response.ok) { const data = await response.json(); throw new Error(data.error || JSON.stringify(data)) }
-      await load()
-    } catch (error) { setError(error.message) }
   }
   return <div className="space-y-6">
     <h2 className="text-xl font-bold">Locations & pickup hubs</h2>
@@ -77,7 +86,7 @@ export default function PickupHubs() {
       <div className="flex flex-wrap gap-3">{locations.map(location => <div key={location.id} className="rounded-lg border p-3 text-sm">
         <strong>{location.name}</strong> · {location.is_active ? 'Active' : 'Inactive'}
         <button onClick={() => setLocationForm(location)} className="ml-3 text-[#047857]">Edit</button>
-        <button onClick={() => removeLocation(location)} className="ml-3 text-red-600">Delete</button>
+        <button onClick={() => requestDelete(location, 'location')} className="ml-3 text-red-600">Delete</button>
       </div>)}</div>
     </section>
     <form onSubmit={save} className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 sm:grid-cols-2">
@@ -95,8 +104,9 @@ export default function PickupHubs() {
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{hubs.map((hub) => <div key={hub.id} className="rounded-2xl border border-slate-200 bg-white p-5">
       <h3 className="font-bold">{hub.name}</h3><p className="text-sm text-slate-500">{hub.location_name || hub.city} · {hub.is_active ? 'Active' : 'Inactive'}</p>
       <p className="mt-2 text-sm">{hub.address}</p><p className="text-sm">{hub.phone}</p>
-      <div className="mt-4 flex gap-4"><button onClick={() => setForm(hub)} className="text-teal-700">Edit</button><button onClick={() => remove(hub)} className="text-red-600">Delete</button></div>
+      <div className="mt-4 flex gap-4"><button onClick={() => setForm(hub)} className="text-teal-700">Edit</button><button onClick={() => requestDelete(hub, 'pickup hub')} className="text-red-600">Delete</button></div>
     </div>)}</div>
     {!hubs.length && <p className="text-slate-500">Add a hub, then assign vehicles in Fleet.</p>}
+    {deleteTarget && <DeleteConfirmation name={deleteTarget.item.name} kind={deleteTarget.kind} loading={deleting} error={deleteError} onClose={() => { if (!deleting) setDeleteTarget(null) }} onConfirm={confirmDelete} />}
   </div>
 }
