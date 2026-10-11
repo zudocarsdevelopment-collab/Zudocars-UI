@@ -406,7 +406,7 @@ export default function Maintenance({ cars = [], onServices }) {
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="font-black">Cars currently under repair</h2>
+          <h2 className="text-lg leading-7 text-slate-800">Cars currently under repair</h2>
           <div className="mt-5">
             <EmptyState
               icon={Ban}

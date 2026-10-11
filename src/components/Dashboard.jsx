@@ -39,6 +39,8 @@ import Accounts from "./Accounts";
 import Maintenance from "./Maintenance";
 import ServiceManagement from "./ServiceManagement";
 import VehicleReturnModal from './VehicleReturnModal';
+import BulkDailyPriceModal from './BulkDailyPriceModal';
+import { readApiJson } from '../lib/apiResponse';
 
 const VEHICLES_API_URL =
   import.meta.env.VITE_VEHICLES_API_URL ||
@@ -448,6 +450,19 @@ export default function Dashboard() {
 
   // --- Vehicle writes go straight to the Django Vehicles API ---
 
+  async function updateDailyPrices(payload) {
+    setAction('bulkPrices');
+    try {
+      const response = await fetch(`${VEHICLES_API_URL.replace(/\/?$/, '/')}bulk-daily-price/`, {
+        method: 'POST', headers: bookingAuthHeaders(), body: JSON.stringify(payload),
+      });
+      const data = await readApiJson(response, 'Unable to update daily prices.');
+      const updated = new Map(data.vehicles.map(vehicle => [vehicle.id, mapVehicle(vehicle)]));
+      setCars(current => current.map(car => updated.get(car.id) || car));
+      setNotice(`Daily prices updated for ${data.updated} vehicle${data.updated === 1 ? '' : 's'}.`);
+    } finally { setAction(''); }
+  }
+
   async function fetchVehicleById(carId) {
     const response = await fetch(`${VEHICLES_API_URL}${carId}/`);
     const data = await readResponse(response);
@@ -664,6 +679,7 @@ export default function Dashboard() {
                   onEdit={handleEditCar}
                   onToggle={toggleCar}
                   onDelete={setDeleteTarget}
+                  onBulkPrice={updateDailyPrices}
                   action={action}
                 />
               )}
@@ -858,7 +874,7 @@ function Brand() {
 }
 function Overview({ cars, bookings, staff, onBookings, onFleet }) {
   const approvedRevenue = bookings
-    .filter((booking) => booking.status === "Approved")
+    .filter((booking) => ["Approved", "Completed"].includes(booking.status))
     .reduce((total, booking) => total + Number(booking.amount), 0);
   const cards = [
     {
@@ -870,7 +886,7 @@ function Overview({ cars, bookings, staff, onBookings, onFleet }) {
     },
     {
       label: "Active Bookings",
-      value: bookings.filter((booking) => booking.status === "Approved").length,
+      value: bookings.filter((booking) => ["Approved", "Completed"].includes(booking.status)).length,
       sub: `${bookings.filter((booking) => booking.status === "Pending").length} pending confirmation`,
       icon: CalendarDays,
       onClick: onBookings,
@@ -882,9 +898,9 @@ function Overview({ cars, bookings, staff, onBookings, onFleet }) {
       icon: Users,
     },
     {
-      label: "Approved Revenue",
+      label: "Booked Revenue",
       value: formatINR(approvedRevenue),
-      sub: "Across confirmed bookings",
+      sub: "Across confirmed and completed bookings",
       icon: BarChart3,
     },
   ];
@@ -1046,11 +1062,22 @@ function Fleet({
   onEdit,
   onToggle,
   onDelete,
+  onBulkPrice,
   action,
 }) {
   const [fuelFilter, setFuelFilter] = useState("");
   const [transmissionFilter, setTransmissionFilter] = useState("");
   const [bodyFilter, setBodyFilter] = useState("");
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [priceModal, setPriceModal] = useState(false);
+  const selectedCars = cars.filter(car => selectedIds.has(car.id) && isPersistedCar(car));
+  function toggleSelection(id) {
+    setSelectedIds(current => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
 
   const fuelOptions = useMemo(
     () => [...new Set(cars.map((car) => car.fuel).filter(Boolean))],
@@ -1112,12 +1139,25 @@ function Fleet({
       <p className="text-xs font-semibold text-slate-400">
         Showing {filtered.length} of {cars.length} vehicles
       </p>
+      {isAdmin && <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+        <span className="text-sm font-medium">{selectedCars.length} selected</span>
+        <button type="button" disabled={Boolean(action)} onClick={() => setSelectedIds(new Set(cars.filter(isPersistedCar).map(car => car.id)))} className="text-sm font-medium text-teal-700">Select all vehicles</button>
+        <button type="button" disabled={Boolean(action)} onClick={() => setSelectedIds(current => new Set([...current, ...filtered.filter(isPersistedCar).map(car => car.id)]))} className="text-sm font-medium text-teal-700">Select shown</button>
+        <button type="button" disabled={Boolean(action) || !selectedCars.length} onClick={() => setSelectedIds(new Set())} className="text-sm text-slate-500 disabled:opacity-50">Clear selection</button>
+        <button type="button" disabled={Boolean(action) || !selectedCars.length} onClick={() => setPriceModal(true)} className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">Update daily prices</button>
+        <p className="w-full text-xs text-slate-500">Select vehicles below, then increase, decrease, or set their daily prices together. Selections stay selected when you filter the list.</p>
+      </div>}
       <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
         {filtered.map((car) => (
           <article
             key={car.id}
             className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
           >
+            {isAdmin && (
+              <label className="absolute left-3 top-3 z-10 flex cursor-pointer items-center gap-2 rounded-lg bg-white/95 px-3 py-2 text-xs font-medium text-slate-800 shadow-sm">
+                <input type="checkbox" aria-label={`Select ${car.plateNumber || car.model || car.name}`} checked={selectedIds.has(car.id)} disabled={Boolean(action) || !isPersistedCar(car)} onChange={() => toggleSelection(car.id)} className="h-4 w-4 accent-teal-700" />Select
+              </label>
+            )}
             {isAdmin && (
               <button
                 onClick={() => onEdit(car)}
@@ -1219,6 +1259,7 @@ function Fleet({
           </p>
         )}
       </div>
+      {priceModal && <BulkDailyPriceModal cars={selectedCars} onClose={() => setPriceModal(false)} onSave={onBulkPrice} />}
     </div>
   );
 }
