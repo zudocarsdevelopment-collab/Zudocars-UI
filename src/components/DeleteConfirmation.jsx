@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Trash2, X } from 'lucide-react'
 
-export default function DeleteConfirmation({ name, kind, loading, error, onClose, onConfirm }) {
+export default function DeleteConfirmation({ name, kind, loading, error, onClose, onConfirm, description }) {
   const dialogRef = useRef(null)
   useEffect(() => {
     const dialog = dialogRef.current
@@ -18,6 +18,7 @@ export default function DeleteConfirmation({ name, kind, loading, error, onClose
       <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600"><Trash2 size={24} /></div>
       <h3 id="delete-title" className="text-xl font-bold">Delete {kind}?</h3>
       <p id="delete-description" className="mt-2 break-words text-sm leading-6 text-slate-500">Are you sure you want to delete <strong className="text-slate-800">{name}</strong>? This action cannot be undone.</p>
+      {description && <p className="mt-3 text-sm leading-6 text-slate-500">{description}</p>}
       {error && <p role="alert" className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
       <div className="mt-6 flex justify-end gap-3">
         <button type="button" autoFocus disabled={loading} onClick={onClose} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50">Cancel</button>

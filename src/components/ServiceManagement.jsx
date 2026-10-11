@@ -1,4 +1,7 @@
 import { createServiceType, updateMaintenanceSchedule } from "../lib/maintenanceApi";
+import { dashboardHeaders } from '../lib/apiConfig';
+import { readApiJson } from '../lib/apiResponse';
+import DeleteConfirmation from './DeleteConfirmation';
 import { useEffect, useMemo, useState } from "react";
 import {
   Building2,
@@ -21,6 +24,7 @@ import {
   fetchMaintenanceSchedules,
   fetchServiceRecords,
   fetchServiceTypes,
+  SERVICE_RECORDS_API_URL,
 } from "../lib/maintenanceApi";
 
 // Service Queue reads MaintenanceSchedule, Service History reads
@@ -447,7 +451,7 @@ function Stat({ label, value }) {
   );
 }
 
-function ServiceHistory({ cars, records, schedules }) {
+function ServiceHistory({ cars, records, schedules, onDelete }) {
   const [selectedId, setSelectedId] = useState(cars[0]?.id ?? null);
   const selected = cars.find((car) => car.id === selectedId) || cars[0];
 
@@ -529,7 +533,10 @@ function ServiceHistory({ cars, records, schedules }) {
                           {r.serviceDate || "—"} · {r.odometerReading.toLocaleString("en-IN")} km
                         </p>
                       </div>
-                      <p className="text-sm font-black">{formatMaintenanceINR(r.totalCost)}</p>
+                      <div className="flex items-center gap-4">
+                        <p className="text-sm font-black">{formatMaintenanceINR(r.totalCost)}</p>
+                        <button type="button" onClick={() => onDelete(r)} className="text-sm font-semibold text-red-600">Delete service record</button>
+                      </div>
                     </div>
                     <div className="mt-3 grid gap-2 text-xs text-slate-500 sm:grid-cols-2">
                       <p>Parts: {formatMaintenanceINR(r.partsCost)}</p>
@@ -636,6 +643,22 @@ export default function ServiceManagement({ cars = [], onFleetRefresh }) {
   const [serviceTypes, setServiceTypes] = useState([]);
   const [entryMode, setEntryMode] = useState("");
   const [selectedSchedule, setSelectedSchedule] = useState(null);
+  const [deleteRecord, setDeleteRecord] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
+  async function confirmDeleteRecord() {
+    if (deleting || !deleteRecord) return;
+    setDeleting(true); setDeleteError('');
+    try {
+      const response = await fetch(`${SERVICE_RECORDS_API_URL.replace(/\/?$/, '/')}${deleteRecord.id}/`, { method: 'DELETE', headers: dashboardHeaders() });
+      if (!response.ok) await readApiJson(response, 'Unable to delete service record.');
+      setRecords(current => current.filter(record => record.id !== deleteRecord.id));
+      setDeleteRecord(null);
+      await load();
+    } catch (error) { setDeleteError(error.message); }
+    finally { setDeleting(false); }
+  }
 
   async function load() {
     setLoading(true);
@@ -738,7 +761,7 @@ export default function ServiceManagement({ cars = [], onFleetRefresh }) {
             recordError ? (
               <LoadError message={recordError} onRetry={load} />
             ) : (
-              <ServiceHistory cars={cars} records={records} schedules={schedules} />
+              <ServiceHistory cars={cars} records={records} schedules={schedules} onDelete={record => { setDeleteError(''); setDeleteRecord(record); }} />
             )
           )}
           {subTab === "centres" && (
@@ -760,6 +783,7 @@ export default function ServiceManagement({ cars = [], onFleetRefresh }) {
           onSave={saveEntry}
         />
       )}
+      {deleteRecord && <DeleteConfirmation kind="service record" name={`${deleteRecord.serviceTypeName || 'Service'} on ${deleteRecord.serviceDate || 'this vehicle'}`} loading={deleting} error={deleteError} onClose={() => { if (!deleting) setDeleteRecord(null); }} onConfirm={confirmDeleteRecord} description="Deleting this record removes its cost from Accounts and recalculates maintenance reminders. Vehicle mileage is preserved. Other schedules, bookings, or expenses can still prevent vehicle deletion." />}
     </div>
   );
 }

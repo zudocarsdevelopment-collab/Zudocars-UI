@@ -40,6 +40,7 @@ import Maintenance from "./Maintenance";
 import ServiceManagement from "./ServiceManagement";
 import VehicleReturnModal from './VehicleReturnModal';
 import BulkDailyPriceModal from './BulkDailyPriceModal';
+import BookingNotesModal from './BookingNotesModal';
 import { readApiJson } from '../lib/apiResponse';
 
 const VEHICLES_API_URL =
@@ -310,6 +311,8 @@ export default function Dashboard() {
   const [returnBooking, setReturnBooking] = useState(null);
   const [staffModal, setStaffModal] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteError, setDeleteError] = useState('');
+  const [notesBooking, setNotesBooking] = useState(null);
   const [adminPrompt, setAdminPrompt] = useState(null);
   const [notice, setNotice] = useState("");
   // Admin-only gating has been removed — every signed-in user now sees
@@ -436,16 +439,14 @@ export default function Dashboard() {
     finally { setAction(""); }
   }
 
-  async function updateBookingNotes(booking) {
-    const notes = window.prompt("Booking notes", booking.notes || "");
-    if (notes === null) return;
+  async function updateBookingNotes(booking, notes) {
     setAction("updateBookingNotes");
     setError("");
     try {
       await updateLocalBooking(booking.id, { notes });
       setBookings((items) => items.map((item) => item.id === booking.id ? { ...item, notes } : item));
-    } catch (error) { setError(error.message); }
-    finally { setAction(""); }
+      setNotice('Booking notes saved.');
+    } finally { setAction(""); }
   }
 
   // --- Vehicle writes go straight to the Django Vehicles API ---
@@ -542,17 +543,17 @@ export default function Dashboard() {
 
   async function deleteCar(car) {
     setAction("deleteCar");
-    setError("");
+    setDeleteError('');
     try {
       const response = await fetch(`${VEHICLES_API_URL}${car.id}/`, {
         method: "DELETE",
+        headers: bookingAuthHeaders(),
       });
-      if (!response.ok)
-        throw new Error(`Request failed (${response.status}).`);
+      if (!response.ok) await readApiJson(response, 'Unable to delete vehicle.');
       setCars((items) => items.filter((item) => item.id !== car.id));
       setDeleteTarget(null);
     } catch (deleteError) {
-      setError(deleteError.message || "Unable to delete vehicle.");
+      setDeleteError(deleteError.message || "Unable to delete vehicle.");
     } finally {
       setAction("");
     }
@@ -574,13 +575,13 @@ export default function Dashboard() {
     await saveStaff({ ...member, status });
   }
   async function deleteStaff(member) {
-    setAction('deleteUser'); setError('');
+    setAction('deleteUser'); setDeleteError('');
     try {
       const response = await fetch(apiUrl(`/api/staff/${member.id}/`), { method: 'DELETE', headers: bookingAuthHeaders() });
       if (!response.ok) await readResponse(response);
       setStaff((items) => items.filter((item) => item.id !== member.id));
       setDeleteTarget(null);
-    } catch (error) { setError(error.message); }
+    } catch (error) { setDeleteError(error.message); }
     finally { setAction(''); }
   }
   function signOut() {
@@ -678,7 +679,7 @@ export default function Dashboard() {
                   onAdd={() => setCarModal("new")}
                   onEdit={handleEditCar}
                   onToggle={toggleCar}
-                  onDelete={setDeleteTarget}
+                  onDelete={target => { setDeleteError(''); setDeleteTarget(target); }}
                   onBulkPrice={updateDailyPrices}
                   action={action}
                 />
@@ -698,7 +699,7 @@ export default function Dashboard() {
                   setQuery={setSearch}
                   onStatus={updateBookingStatus}
                   onAssign={assignBooking}
-                  onNotes={updateBookingNotes}
+                  onNotes={setNotesBooking}
                   onRefresh={async () => {
                     setAction("refreshBookings");
                     setError("");
@@ -716,7 +717,7 @@ export default function Dashboard() {
                   setQuery={setSearch}
                   onEdit={setStaffModal}
                   onStatus={updateStaffStatus}
-                  onDelete={setDeleteTarget}
+                  onDelete={target => { setDeleteError(''); setDeleteTarget(target); }}
                   action={action}
                 />
               )}
@@ -762,8 +763,9 @@ export default function Dashboard() {
       {deleteTarget && (
         <DeleteConfirmModal
           target={deleteTarget}
+          error={deleteError}
           kind={deleteTarget.email ? "staff member" : "vehicle"}
-          onClose={() => setDeleteTarget(null)}
+          onClose={() => { if (!action) setDeleteTarget(null); }}
           onConfirm={() =>
             deleteTarget.email
               ? deleteStaff(deleteTarget)
@@ -772,6 +774,7 @@ export default function Dashboard() {
           loading={Boolean(action)}
         />
       )}
+      {notesBooking && <BookingNotesModal booking={notesBooking} onClose={() => setNotesBooking(null)} onSave={updateBookingNotes} />}
       {adminPrompt && (
         <AdminKeyModal
           action={adminPrompt.actionName}
@@ -1765,7 +1768,7 @@ function Select({ label, value, options, onChange }) {
     </label>
   );
 }
-function DeleteConfirmModal({ target, kind, onClose, onConfirm, loading }) {
+function DeleteConfirmModal({ target, kind, onClose, onConfirm, loading, error }) {
   return (
     <Modal title={`Delete ${kind}?`} onClose={onClose}>
       <div className="flex gap-3 rounded-2xl bg-red-50 p-4 text-sm text-red-700">
@@ -1775,6 +1778,7 @@ function DeleteConfirmModal({ target, kind, onClose, onConfirm, loading }) {
           cannot be undone.
         </p>
       </div>
+      {error && <p role="alert" className="mt-4 rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</p>}
       <ModalActions
         onClose={onClose}
         onConfirm={onConfirm}
