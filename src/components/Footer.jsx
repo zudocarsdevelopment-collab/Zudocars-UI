@@ -40,6 +40,7 @@ export default function Footer() {
       </div>
       <div className="footer-bottom">
         <p>© {new Date().getFullYear()} Zudo Cars. All rights reserved.</p>
+        <p>Powered by Careergize LLP</p>
         <p>Self-drive car rentals across Kerala. Office hours: 8:00 AM – 8:00 PM. <button type="button" onClick={() => openTerms()}>Rental terms apply.</button></p>
       </div>
     </div>

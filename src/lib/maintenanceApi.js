@@ -63,6 +63,7 @@ export async function fetchServiceTypes() {
 
 export function mapMaintenanceSchedule(s, serviceTypeNames) {
   return {
+    isAutomatic: s.is_automatic === true,
     id: s.id,
     carId: relatedId(s.car),
     serviceTypeId: relatedId(s.service_type),

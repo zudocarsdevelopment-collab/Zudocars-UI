@@ -166,11 +166,11 @@ function MaintenanceEntryModal({ mode, cars, serviceTypes, selectedSchedule, onC
         <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
           <div>
             <h2 className="text-lg font-black text-slate-900">
-              {isSchedule ? "Add service schedule" : "Log completed service"}
+              {isSchedule ? "Add or update service schedule" : "Log completed service"}
             </h2>
             <p className="mt-1 text-sm text-slate-500">
               {isSchedule
-                ? "Create a maintenance item in the service queue."
+                ? "For the same vehicle and service type, this updates the existing active schedule. Completed and cancelled history stays unchanged."
                 : "Add a completed visit to service history."}
             </p>
           </div>
@@ -278,7 +278,7 @@ function MaintenanceEntryModal({ mode, cars, serviceTypes, selectedSchedule, onC
             className="inline-flex items-center gap-2 rounded-lg bg-teal-800 px-4 py-2.5 text-sm font-bold text-white hover:bg-teal-900 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-            {isSchedule ? "Add to queue" : "Save service"}
+            {isSchedule ? "Save schedule" : "Save service"}
           </button>
         </div>
       </form>
@@ -423,7 +423,7 @@ function ServiceQueue({ cars, schedules, onStatus, onLog }) {
                         </p>}
                       </td>
                       <td className="px-4 py-4">
-                        {['Checkup (5,000 km)', 'Full service (10,000 km)'].includes(row.serviceTypeName) ? <div className="space-y-2">
+                        {row.isAutomatic ? <div className="space-y-2">
                           <p className="font-semibold">{row.statusLabel}</p>
                           {!['completed', 'cancelled'].includes(row.status) && <button onClick={() => onLog(row)} className="text-[#047857] font-semibold">Log completed work</button>}
                         </div> : <select aria-label="Schedule status" value={row.status} onChange={(event) => onStatus(row.id, event.target.value)} className="rounded-lg border px-2 py-1">
