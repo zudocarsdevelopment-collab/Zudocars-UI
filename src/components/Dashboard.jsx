@@ -1581,6 +1581,17 @@ function ModalActions({ onClose, onConfirm, loading, label }) {
 function CarFormModal({ car, onClose, onSave, loading }) {
   const { hubs, error: hubError } = usePickupHubs();
   const [form, setForm] = useState(car);
+  const [locations, setLocations] = useState([]);
+  const [locationsLoading, setLocationsLoading] = useState(true);
+  const [locationError, setLocationError] = useState('');
+  useEffect(() => {
+    let active = true;
+    fetch(apiUrl('/api/locations/')).then(response => readApiJson(response, 'Unable to load locations.'))
+      .then(data => { if (active) setLocations(data); })
+      .catch(error => { if (active) setLocationError(error.message); })
+      .finally(() => { if (active) setLocationsLoading(false); });
+    return () => { active = false; };
+  }, []);
   const update = (field, value) =>
     setForm((current) => ({ ...current, [field]: value }));
   return (
@@ -1593,6 +1604,17 @@ function CarFormModal({ car, onClose, onSave, loading }) {
           </select>
           {hubError && <span className="text-red-600">{hubError}</span>}
         </label>
+        <div>
+          <label htmlFor="vehicle-current-location" className="text-sm font-semibold text-slate-700">Current location</label>
+          <select id="vehicle-current-location" value={form.locationCurrent || ''} disabled={locationsLoading || loading}
+            onChange={event => update('locationCurrent', event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#047857]">
+            <option value="">{locationsLoading ? 'Loading locations…' : 'Choose a location'}</option>
+            {form.locationCurrent && !locations.some(location => location.name === form.locationCurrent) && <option value={form.locationCurrent}>{form.locationCurrent} (current value)</option>}
+            {locations.map(location => <option key={location.id} value={location.name}>{location.name}</option>)}
+          </select>
+          {locationError && <p role="alert" className="mt-1 text-sm text-red-600">{locationError}</p>}
+          {!locationsLoading && !locationError && !locations.length && <p className="mt-1 text-xs text-slate-500">Add locations in Locations &amp; Hubs to choose them here.</p>}
+        </div>
 
         {[
           ["name", "Name"],
@@ -1602,17 +1624,17 @@ function CarFormModal({ car, onClose, onSave, loading }) {
           ["year", "Year"],
           ["odometer", "Odometer (km)"],
           ["seats", "Seats"],
-          ["locationCurrent", "Current location"],
           ["bookingType", "Booking type"],
           ["dailyPrice", "Daily price"],
           ["fastagCharge", "FASTag charge"],
           ["rating", "Rating"],
-          ["image", "Photo URL"],
+          ["image", "Photo URL (add vehicle image URL)"],
         ].map(([field, label]) => (
           <label key={field} className="text-sm font-semibold text-slate-700">
             {label}
             <input
               value={form[field] ?? ""}
+              placeholder={field === 'image' ? 'https://example.com/vehicle.jpg' : undefined}
               onChange={(event) => update(field, event.target.value)}
               className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#047857]"
             />
