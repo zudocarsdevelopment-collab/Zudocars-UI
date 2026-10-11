@@ -394,8 +394,8 @@ export default function Dashboard() {
     { id: "overview", label: "Overview", icon: BarChart3 },
     { id: "fleet", label: "Fleet", icon: Car },
     { id: "hubs", label: "Locations & Hubs", icon: MapPin },
-    { id: "maintenance", label: "Maintenance", icon: Wrench },
     { id: "services", label: "Service Management", icon: ClipboardList },
+    { id: "maintenance", label: "Maintenance History", icon: Wrench },
     {
       id: "bookings",
       label: "Bookings",
