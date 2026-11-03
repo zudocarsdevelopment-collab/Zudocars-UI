@@ -41,6 +41,7 @@ import ServiceManagement from "./ServiceManagement";
 import VehicleReturnModal from './VehicleReturnModal';
 import BulkDailyPriceModal from './BulkDailyPriceModal';
 import BookingNotesModal from './BookingNotesModal';
+import ManualBookingModal from './ManualBookingModal';
 import { readApiJson } from '../lib/apiResponse';
 
 const VEHICLES_API_URL =
@@ -313,6 +314,8 @@ export default function Dashboard() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteError, setDeleteError] = useState('');
   const [notesBooking, setNotesBooking] = useState(null);
+  const [manualBookingOpen, setManualBookingOpen] = useState(false);
+  const [editingBooking, setEditingBooking] = useState(null);
   const [adminPrompt, setAdminPrompt] = useState(null);
   const [notice, setNotice] = useState("");
   // Admin-only gating has been removed — every signed-in user now sees
@@ -700,6 +703,17 @@ export default function Dashboard() {
                   onStatus={updateBookingStatus}
                   onAssign={assignBooking}
                   onNotes={setNotesBooking}
+                  onAdd={() => { setEditingBooking(null); setManualBookingOpen(true); }}
+                  onEdit={async booking => {
+                    setAction('loadBooking');
+                    setError('');
+                    try {
+                      const response = await fetch(apiUrl(`/api/bookings/${encodeURIComponent(booking.id)}/`), { headers: bookingAuthHeaders() });
+                      setEditingBooking(await readApiJson(response, 'Unable to load booking.'));
+                      setManualBookingOpen(true);
+                    } catch (error) { setError(error.message); }
+                    finally { setAction(''); }
+                  }}
                   onRefresh={async () => {
                     setAction("refreshBookings");
                     setError("");
@@ -774,6 +788,15 @@ export default function Dashboard() {
           loading={Boolean(action)}
         />
       )}
+      {manualBookingOpen && <ManualBookingModal cars={cars} booking={editingBooking} onClose={() => setManualBookingOpen(false)} onSave={async payload => {
+        const response = await fetch(apiUrl(editingBooking ? `/api/bookings/${encodeURIComponent(editingBooking.reference)}/` : '/api/bookings/list/'), { method: editingBooking ? 'PUT' : 'POST', headers: bookingAuthHeaders(), body: JSON.stringify(payload) });
+        await readApiJson(response, 'Unable to save booking.');
+        setManualBookingOpen(false);
+        setNotice(editingBooking ? 'Booking updated successfully.' : 'Booking added successfully.');
+        setSearch('');
+        try { setBookings((await getBookings()).bookings); }
+        catch (error) { setError('Booking was saved. Refresh bookings to reload the list.'); }
+      }} />}
       {notesBooking && <BookingNotesModal booking={notesBooking} onClose={() => setNotesBooking(null)} onSave={updateBookingNotes} />}
       {adminPrompt && (
         <AdminKeyModal
@@ -1276,6 +1299,8 @@ function Bookings({
   onStatus,
   onAssign,
   onNotes,
+  onEdit,
+  onAdd,
   onRefresh,
   action,
 }) {
@@ -1286,8 +1311,9 @@ function Bookings({
   );
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <div className="flex-1"><Toolbar title="Bookings" query={query} setQuery={setQuery} /></div>
+        <button onClick={onAdd} disabled={!!action} className="flex items-center gap-2 rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white"><Plus size={16} />Add booking</button>
         <button onClick={onRefresh} disabled={!!action} className="rounded-lg border border-slate-200 px-4 py-2 text-sm">Refresh bookings</button>
       </div>
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -1375,6 +1401,7 @@ function Bookings({
                     </td>
                   )}
                   <td className="px-5 py-4">
+                    <button disabled={!!action} onClick={() => onEdit(booking)} className="mb-2 mr-3 text-teal-700">Edit booking</button>
                     <button disabled={!!action} onClick={() => onNotes(booking)} className="mb-2 text-blue-600">Edit notes</button>
                     {booking.notes && <p className="mb-2 max-w-48 whitespace-pre-wrap text-xs text-slate-500">{booking.notes}</p>}
                     {booking.returnOdometer != null && <p className="mb-2 text-xs text-slate-500">Returned at {Number(booking.returnOdometer).toLocaleString('en-IN')} km</p>}
