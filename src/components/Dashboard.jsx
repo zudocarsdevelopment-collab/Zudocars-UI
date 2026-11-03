@@ -1333,10 +1333,33 @@ function Bookings({
   onRefresh,
   action,
 }) {
+  const [saleFrom, setSaleFrom] = useState('')
+  const [saleTo, setSaleTo] = useState('')
+  const [exporting, setExporting] = useState('')
+  const [exportError, setExportError] = useState('')
+  const invalidSaleRange = saleFrom && saleTo && saleTo < saleFrom
+  async function downloadSaleReport(fileType) {
+    if (!saleFrom || !saleTo || invalidSaleRange || exporting) return
+    setExporting(fileType); setExportError('')
+    try {
+      const params = new URLSearchParams({ date_from: saleFrom, date_to: saleTo, file_type: fileType, search: query })
+      const response = await fetch(apiUrl(`/api/reports/sales/?${params}`), { headers: bookingAuthHeaders() })
+      if (!response.ok) await readResponse(response)
+      const url = URL.createObjectURL(await response.blob())
+      const link = document.createElement('a')
+      link.href = url; link.download = `sale-report-${saleFrom}-${saleTo}.${fileType}`
+      document.body.appendChild(link); link.click(); link.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+    } catch (error) { setExportError(error.message || 'Unable to download sale report.') }
+    finally { setExporting('') }
+  }
   const filtered = bookings.filter((booking) =>
     `${booking.id} ${booking.customerName} ${booking.phone} ${booking.vehicle} ${booking.status} ${booking.assignedEmail}`
       .toLowerCase()
-      .includes(query.toLowerCase()),
+      .includes(query.toLowerCase()) && (!sale || (() => {
+        const returned = new Date(booking.returnedAt).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
+        return !invalidSaleRange && (!saleFrom || returned >= saleFrom) && (!saleTo || returned <= saleTo)
+      })()),
   );
   return (
     <div className="space-y-6">
@@ -1346,6 +1369,19 @@ function Bookings({
         <button onClick={onRefresh} disabled={!!action} className="booking-action booking-action--neutral"><RefreshCw className={`h-3.5 w-3.5 ${action === 'refreshBookings' ? 'animate-spin' : ''}`} aria-hidden="true" />Refresh bookings</button>
       </div>
       {sale && <p className="text-sm text-slate-500">Completed rental transactions after the vehicle has been returned. Open details to review the booking amount, return odometer and return notes.</p>}
+      {sale && <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="text-sm font-medium">Returned from<input type="date" value={saleFrom} onChange={event => setSaleFrom(event.target.value)} className="mt-1 block rounded-lg border border-slate-300 bg-white p-2 text-slate-900" /></label>
+          <label className="text-sm font-medium">Returned to<input type="date" value={saleTo} min={saleFrom || undefined} onChange={event => setSaleTo(event.target.value)} className="mt-1 block rounded-lg border border-slate-300 bg-white p-2 text-slate-900" /></label>
+          <button type="button" className="booking-action booking-action--neutral" onClick={() => { setSaleFrom(''); setSaleTo(''); setExportError('') }}>Clear dates</button>
+          <button type="button" disabled={!saleFrom || !saleTo || !!invalidSaleRange || !!exporting} onClick={() => downloadSaleReport('pdf')} className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">{exporting === 'pdf' ? 'Downloading…' : 'Download PDF'}</button>
+          <button type="button" disabled={!saleFrom || !saleTo || !!invalidSaleRange || !!exporting} onClick={() => downloadSaleReport('xlsx')} className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">{exporting === 'xlsx' ? 'Downloading…' : 'Download Excel'}</button>
+        </div>
+        <p className="text-xs text-slate-500">Select both dates to download a report. Dates include the full day in India time. Downloads also use the current search.</p>
+        {invalidSaleRange && <p role="alert" className="text-sm text-red-600">End date must be on or after start date.</p>}
+        {exportError && <p role="alert" className="text-sm text-red-600">{exportError}</p>}
+        <p className="text-sm font-semibold">{filtered.length} transactions · Total: {formatINR(filtered.reduce((sum, booking) => sum + Number(booking.amount || 0), 0))}</p>
+      </div>}
       {onTrip && <p className="text-sm text-slate-500">Confirmed bookings whose pickup time has passed and whose vehicles have not been returned. Overdue vehicles stay here until their return is recorded.</p>}
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
