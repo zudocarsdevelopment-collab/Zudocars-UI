@@ -43,6 +43,7 @@ import VehicleReturnModal from './VehicleReturnModal';
 import BulkDailyPriceModal from './BulkDailyPriceModal';
 import BookingNotesModal from './BookingNotesModal';
 import BookingDetailsModal from './BookingDetailsModal';
+import PlanningCalendar from './PlanningCalendar';
 import ManualBookingModal from './ManualBookingModal';
 import { isOnTrip, isTripOverdue } from '../lib/onTrip';
 import { readApiJson } from '../lib/apiResponse';
@@ -397,6 +398,13 @@ export default function Dashboard() {
     };
   }, [currentUser]);
 
+  async function refreshPlanningData() {
+    const [carData, bookingData] = await Promise.all([getFleet(), getBookings()]);
+    setCars(carData.cars);
+    setBookings(currentUser?.role === 'staff' ? bookingData.bookings.filter(booking => booking.assignedEmail === currentUser.email) : bookingData.bookings);
+    setTripNow(Date.now());
+  }
+
   const pendingBookings = bookings.filter(
     (booking) => String(booking.status).toLowerCase() === "pending",
   ).length;
@@ -414,6 +422,7 @@ export default function Dashboard() {
     },
     { id: "onTrip", label: "On Trip", icon: Car, badge: bookings.filter(booking => isOnTrip(booking, tripNow)).length },
     { id: "fleet", label: "Fleet", icon: Car },
+    { id: "planning", label: "Planning Calendar", icon: CalendarDays },
     { id: "hubs", label: "Hubs & Locations", icon: MapPin },
     { id: "services", label: "Service Management", icon: ClipboardList },
     { id: "maintenance", label: "Maintenance History", icon: Wrench },
@@ -674,14 +683,15 @@ export default function Dashboard() {
           ) : (
             <>
               {tab === "overview" && (
-                <Overview
+                <div className="space-y-8"><PlanningCalendar cars={cars} bookings={bookings} now={tripNow} onView={setDetailsBooking} onRefresh={refreshPlanningData} /><Overview
                   cars={cars}
                   bookings={bookings}
                   staff={staff}
                   onBookings={() => setTab("bookings")}
                   onFleet={() => setTab("fleet")}
-                />
+                /></div>
               )}
+              {tab === "planning" && <PlanningCalendar cars={cars} bookings={bookings} now={tripNow} onView={setDetailsBooking} onRefresh={refreshPlanningData} />}
               {tab === "fleet" && (
                 <Fleet
                   cars={cars}
