@@ -13,6 +13,11 @@ export default function ManualBookingModal({ cars, booking, onClose, onSave }) {
   const { hubs, error: hubError } = usePickupHubs()
   const [form, setForm] = useState({ cart_vehicle: '', customer_name: '', customer_phone: '', customer_email: '', start: '', end: '', dropoff_location_id: '', rental_amount: '', delivery_amount: '0', notes: '', ...(booking ? { cart_vehicle: String(booking.vehicle), customer_name: booking.customer_name, customer_phone: booking.customer_phone, customer_email: booking.customer_email || '', start: indiaDateTime(booking.start_datetime), end: indiaDateTime(booking.end_datetime), dropoff_location_id: String(booking.dropoff_location_id), rental_amount: booking.rental_amount, delivery_amount: booking.delivery_amount, notes: booking.notes || '' } : {}) })
   const [feeEdited, setFeeEdited] = useState(false)
+  const [discountType, setDiscountType] = useState(booking?.discount_type || 'flat')
+  const [discountValue, setDiscountValue] = useState(booking?.discount_value || '0')
+  const rental = Number(form.rental_amount) || 0
+  const discount = Math.round((discountType === 'percentage' ? rental * Number(discountValue) / 100 : Number(discountValue)) * 100) / 100
+  const discountInvalid = !Number.isFinite(discount) || Number(discountValue) < 0 || (discountType === 'percentage' && Number(discountValue) > 100) || discount > rental
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const car = cars.find(car => String(car.id) === form.cart_vehicle)
@@ -45,13 +50,14 @@ export default function ManualBookingModal({ cars, booking, onClose, onSave }) {
   async function save(event) {
     event.preventDefault()
     if (saving) return
+    if (discountInvalid) { setError('Discount must not exceed the rental amount; percentage must be between 0 and 100.'); return }
     if (new Date(form.end) <= new Date(form.start)) { setError('Return time must be after pickup time.'); return }
     setSaving(true); setError('')
     try {
       await onSave({ customer_name: form.customer_name.trim(), customer_phone: form.customer_phone.trim(), customer_email: form.customer_email,
         cart_vehicle: Number(form.cart_vehicle), pickup_location_id: car.pickupHub, dropoff_location_id: Number(form.dropoff_location_id),
         date_from: form.start.slice(0, 10), time_from: form.start.slice(11), date_to: form.end.slice(0, 10), time_to: form.end.slice(11),
-        rental_amount: form.rental_amount, delivery_amount: form.delivery_amount, notes: form.notes })
+        rental_amount: form.rental_amount, discount_type: discountType, discount_value: discountValue || '0', delivery_amount: form.delivery_amount, notes: form.notes })
       onClose()
     } catch (error) { setError(error.message || 'Unable to save booking.') }
     finally { setSaving(false) }
@@ -74,8 +80,13 @@ export default function ManualBookingModal({ cars, booking, onClose, onSave }) {
         <label className="text-sm">Location charge (₹)<input required type="number" min="0" max="99999999.99" step="0.01" value={form.delivery_amount} onChange={event => { setFeeEdited(true); update('delivery_amount', event.target.value) }} className={inputClass} /></label>
         {pickupLocation && <p className="text-xs text-slate-500 sm:col-span-2">Location default: INR {Number(pickupLocation.effective_booking_amount || 0).toLocaleString('en-IN')}. <button type="button" className="font-medium text-teal-700 underline" onClick={() => { setFeeEdited(true); update('delivery_amount', pickupLocation.effective_booking_amount ?? '0') }}>Use location default</button></p>}
         <label className="text-sm sm:col-span-2">Notes (optional)<textarea maxLength={5000} rows={3} value={form.notes} onChange={event => update('notes', event.target.value)} className={inputClass} /></label>
+        <label className="text-sm">Discount type<select value={discountType} onChange={event => { setDiscountType(event.target.value); setDiscountValue('0') }} className={inputClass}><option value="flat">Flat amount (₹)</option><option value="percentage">Percentage (%)</option></select></label>
+        <label className="text-sm">Discount {discountType === 'percentage' ? '(%)' : '(₹)'}<input type="number" min="0" max={discountType === 'percentage' ? 100 : rental} step="0.01" value={discountValue} onChange={event => setDiscountValue(event.target.value)} className={inputClass} /></label>
+        <p className="text-xs text-slate-500 sm:col-span-2">Discount applies to the rental amount only. Location charges are added separately.</p>
       </fieldset>
-      <p className="text-sm font-medium">Total: ₹{(Number(form.rental_amount) + Number(form.delivery_amount)).toLocaleString('en-IN')} · {booking ? booking.status : historical ? 'Completed' : 'Confirmed'}</p>
+      {discountInvalid && <p role="alert" className="text-sm text-red-600">Enter a valid discount within the rental amount (maximum 100%).</p>}
+      <p className="text-sm">Discount: ₹{(discountInvalid ? 0 : discount).toLocaleString('en-IN')}</p>
+      <p className="text-sm font-medium">Total: ₹{(rental - (discountInvalid ? 0 : discount) + Number(form.delivery_amount)).toLocaleString('en-IN')} · {booking ? booking.status : historical ? 'Completed' : 'Confirmed'}</p>
       {(error || hubError) && <p role="alert" className="text-sm text-red-600">{error || hubError}</p>}
       <div className="flex justify-end gap-3"><button type="button" disabled={saving} onClick={onClose} className="rounded-lg border px-4 py-2">Cancel</button><button disabled={saving || !car || !hubs.length} className="rounded-lg bg-teal-700 px-4 py-2 text-white disabled:opacity-50">{saving ? 'Saving…' : booking ? 'Save changes' : 'Add booking'}</button></div>
     </form>
