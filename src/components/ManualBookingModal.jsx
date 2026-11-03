@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import usePickupHubs from '../lib/usePickupHubs'
 import CustomerFields from './CustomerFields'
+import { apiUrl } from '../lib/apiConfig'
+import { readApiJson } from '../lib/apiResponse'
 
 function indiaDateTime(value) {
   if (!value) return ''
@@ -8,7 +10,7 @@ function indiaDateTime(value) {
   return date.toISOString().slice(0, 19)
 }
 
-export default function ManualBookingModal({ cars, booking, onClose, onSave }) {
+export default function ManualBookingModal({ cars, booking, token, onClose, onSave }) {
   const dialogRef = useRef(null)
   const { hubs, error: hubError } = usePickupHubs()
   const [form, setForm] = useState({ cart_vehicle: '', customer_name: '', customer_phone: '', customer_email: '', start: '', end: '', dropoff_location_id: '', rental_amount: '', delivery_amount: '0', notes: '', ...(booking ? { cart_vehicle: String(booking.vehicle), customer_name: booking.customer_name, customer_phone: booking.customer_phone, customer_email: booking.customer_email || '', start: indiaDateTime(booking.start_datetime), end: indiaDateTime(booking.end_datetime), dropoff_location_id: String(booking.dropoff_location_id), rental_amount: booking.rental_amount, delivery_amount: booking.delivery_amount, notes: booking.notes || '' } : {}) })
@@ -20,6 +22,28 @@ export default function ManualBookingModal({ cars, booking, onClose, onSave }) {
   const discountInvalid = !Number.isFinite(discount) || Number(discountValue) < 0 || (discountType === 'percentage' && Number(discountValue) > 100) || discount > rental
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [availability, setAvailability] = useState({ key: '', vehicles: [], error: '' })
+  const validDates = !!form.start && !!form.end && Date.parse(`${form.end}+05:30`) > Date.parse(`${form.start}+05:30`)
+  const availabilityKey = JSON.stringify([form.start, form.end, booking?.reference || ''])
+  const checkingAvailability = validDates && availability.key !== availabilityKey
+  const availabilityReady = validDates && !checkingAvailability && !availability.error
+  const availableCars = new Map(availability.vehicles.map(vehicle => [String(vehicle.id), vehicle]))
+  const selectedUnavailable = !!form.cart_vehicle && availabilityReady && !availableCars.get(form.cart_vehicle)?.available
+  useEffect(() => {
+    if (!validDates) return
+    const controller = new AbortController()
+    const params = new URLSearchParams({
+      date_from: form.start.slice(0, 10), time_from: form.start.slice(11),
+      date_to: form.end.slice(0, 10), time_to: form.end.slice(11),
+      exclude_reference: booking?.reference || '',
+    })
+    fetch(apiUrl(`/api/bookings/manual-availability/?${params}`), {
+      headers: { Authorization: `Bearer ${token}` }, signal: controller.signal,
+    }).then(response => readApiJson(response, 'Unable to check vehicle availability.'))
+      .then(data => { if (!controller.signal.aborted) setAvailability({ key: availabilityKey, vehicles: data.vehicles, error: '' }) })
+      .catch(error => { if (!controller.signal.aborted) setAvailability({ key: availabilityKey, vehicles: [], error: error.message }) })
+    return () => controller.abort()
+  }, [form.start, form.end, booking?.reference, token, validDates, availabilityKey])
   const car = cars.find(car => String(car.id) === form.cart_vehicle)
   const pickupLocation = hubs.find(location => location.id === Number(car?.pickupHub))
   useEffect(() => {
@@ -50,6 +74,7 @@ export default function ManualBookingModal({ cars, booking, onClose, onSave }) {
   async function save(event) {
     event.preventDefault()
     if (saving) return
+    if (!availabilityReady || selectedUnavailable) { setError('Choose a vehicle available for the selected dates.'); return }
     if (discountInvalid) { setError('Discount must not exceed the rental amount; percentage must be between 0 and 100.'); return }
     if (new Date(form.end) <= new Date(form.start)) { setError('Return time must be after pickup time.'); return }
     setSaving(true); setError('')
@@ -68,11 +93,18 @@ export default function ManualBookingModal({ cars, booking, onClose, onSave }) {
     <p className="mt-2 text-sm text-slate-500">{booking ? 'Correct the booking details below. Saving keeps its current status and return records.' : 'Enter a new or old booking. Past returns are saved as completed; other bookings are confirmed.'} Dates and times are in India time.</p>
     <form onSubmit={save} className="mt-5 space-y-4">
       <fieldset disabled={saving} className="grid gap-4 sm:grid-cols-2">
-        <label className="text-sm sm:col-span-2">Vehicle<select autoFocus required value={form.cart_vehicle} onChange={event => update('cart_vehicle', event.target.value)} className={inputClass}><option value="">Select vehicle</option>{cars.map(car => <option key={car.id} value={car.id}>{car.model} · {car.plateNumber}</option>)}</select></label>
+        <label className="text-sm">Pickup date & time<input autoFocus required type="datetime-local" step="1" value={form.start} onChange={event => update('start', event.target.value)} className={inputClass} /></label>
+        <label className="text-sm">Return date & time<input required type="datetime-local" step="1" value={form.end} onChange={event => update('end', event.target.value)} className={inputClass} /></label>
+        <label className="text-sm sm:col-span-2">Vehicle<select required disabled={!availabilityReady} value={form.cart_vehicle} onChange={event => update('cart_vehicle', event.target.value)} className={inputClass}><option value="">{checkingAvailability ? 'Checking availability…' : !validDates ? 'Select pickup and return dates first' : 'Select vehicle'}</option>{cars.map(car => {
+          const status = availableCars.get(String(car.id))
+          const blocked = availabilityReady && !status?.available
+          return <option key={car.id} value={car.id} disabled={blocked}>{car.model} · {car.plateNumber}{blocked ? ` — Booked${status?.expected_return_at ? ` until ${new Date(status.expected_return_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}` : ' for these dates'}` : ''}</option>
+        })}</select></label>
+        <p className="text-xs text-slate-500 sm:col-span-2">Booked vehicles are disabled for overlapping dates. Select dates after the existing booking ends to book them again.</p>
+        {selectedUnavailable && <p role="alert" className="text-sm text-red-600 sm:col-span-2">The selected vehicle is booked for these dates. Choose another vehicle or change the dates.</p>}
+        {validDates && availability.key === availabilityKey && availability.error && <p role="alert" className="text-sm text-red-600 sm:col-span-2">{availability.error}</p>}
         <CustomerFields name={form.customer_name} phone={form.customer_phone} email={form.customer_email} disabled={saving} inputClass={inputClass}
           onChange={details => setForm(current => ({ ...current, ...details }))} />
-        <label className="text-sm">Pickup date & time<input required type="datetime-local" step="1" value={form.start} onChange={event => update('start', event.target.value)} className={inputClass} /></label>
-        <label className="text-sm">Return date & time<input required type="datetime-local" step="1" value={form.end} onChange={event => update('end', event.target.value)} className={inputClass} /></label>
         <p className="self-center text-sm">Pickup location: {car?.locationBase || 'Select a vehicle'}</p>
         <label className="text-sm">Return location<select required value={form.dropoff_location_id} onChange={event => update('dropoff_location_id', event.target.value)} className={inputClass}><option value="">Select return location</option>{hubs.map(hub => <option key={hub.id} value={hub.id}>{hub.name}</option>)}</select></label>
         <label className="text-sm">Rental amount (₹)<input required type="number" min="0" max="99999999.99" step="0.01" value={form.rental_amount} onChange={event => update('rental_amount', event.target.value)} className={inputClass} /></label>
@@ -88,7 +120,7 @@ export default function ManualBookingModal({ cars, booking, onClose, onSave }) {
       <p className="text-sm">Discount: ₹{(discountInvalid ? 0 : discount).toLocaleString('en-IN')}</p>
       <p className="text-sm font-medium">Total: ₹{(rental - (discountInvalid ? 0 : discount) + Number(form.delivery_amount)).toLocaleString('en-IN')} · {booking ? booking.status : historical ? 'Completed' : 'Confirmed'}</p>
       {(error || hubError) && <p role="alert" className="text-sm text-red-600">{error || hubError}</p>}
-      <div className="flex justify-end gap-3"><button type="button" disabled={saving} onClick={onClose} className="rounded-lg border px-4 py-2">Cancel</button><button disabled={saving || !car || !hubs.length} className="rounded-lg bg-teal-700 px-4 py-2 text-white disabled:opacity-50">{saving ? 'Saving…' : booking ? 'Save changes' : 'Add booking'}</button></div>
+      <div className="flex justify-end gap-3"><button type="button" disabled={saving} onClick={onClose} className="rounded-lg border px-4 py-2">Cancel</button><button disabled={saving || !car || !hubs.length || !availabilityReady || selectedUnavailable} className="rounded-lg bg-teal-700 px-4 py-2 text-white disabled:opacity-50">{saving ? 'Saving…' : booking ? 'Save changes' : 'Add booking'}</button></div>
     </form>
   </dialog>
 }

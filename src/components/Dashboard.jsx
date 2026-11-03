@@ -812,7 +812,7 @@ export default function Dashboard() {
           loading={Boolean(action)}
         />
       )}
-      {manualBookingOpen && <ManualBookingModal cars={cars} booking={editingBooking} onClose={() => setManualBookingOpen(false)} onSave={async payload => {
+      {manualBookingOpen && <ManualBookingModal cars={cars} booking={editingBooking} token={currentUser.token} onClose={() => setManualBookingOpen(false)} onSave={async payload => {
         const response = await fetch(apiUrl(editingBooking ? `/api/bookings/${encodeURIComponent(editingBooking.reference)}/` : '/api/bookings/list/'), { method: editingBooking ? 'PUT' : 'POST', headers: bookingAuthHeaders(), body: JSON.stringify(payload) });
         await readApiJson(response, 'Unable to save booking.');
         setManualBookingOpen(false);
