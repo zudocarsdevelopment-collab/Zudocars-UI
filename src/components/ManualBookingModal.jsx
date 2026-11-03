@@ -23,7 +23,24 @@ export default function ManualBookingModal({ cars, booking, onClose, onSave }) {
     }
   }, [booking, feeEdited, pickupLocation])
   useEffect(() => { const dialog = dialogRef.current; dialog.showModal(); return () => dialog.close() }, [])
-  const update = (key, value) => setForm(current => ({ ...current, [key]: value }))
+  const update = (key, value) => setForm(current => {
+    const next = { ...current, [key]: value }
+    if (['cart_vehicle', 'start', 'end'].includes(key)) {
+      const vehicle = cars.find(item => String(item.id) === next.cart_vehicle)
+      const duration = Date.parse(`${next.end}+05:30`) - Date.parse(`${next.start}+05:30`)
+      let rental = ''
+      if (vehicle && Number.isFinite(duration) && duration > 0) {
+        const hours = Math.ceil(duration / 3600000)
+        if (vehicle.dailyPrice !== '' && vehicle.dailyPrice != null) {
+          if (Number(vehicle.dailyPrice) > 0) rental = (Math.ceil(hours / 24) * Number(vehicle.dailyPrice)).toFixed(2)
+        } else if (Number(vehicle.hourlyRate) > 0) {
+          rental = Math.max(hours * Number(vehicle.hourlyRate), Number(vehicle.minHoursRate) || 0).toFixed(2)
+        }
+      }
+      next.rental_amount = rental
+    }
+    return next
+  })
   const historical = form.end && new Date(`${form.end}+05:30`) <= new Date()
   async function save(event) {
     event.preventDefault()
@@ -53,6 +70,7 @@ export default function ManualBookingModal({ cars, booking, onClose, onSave }) {
         <p className="self-center text-sm">Pickup location: {car?.locationBase || 'Select a vehicle'}</p>
         <label className="text-sm">Return location<select required value={form.dropoff_location_id} onChange={event => update('dropoff_location_id', event.target.value)} className={inputClass}><option value="">Select return location</option>{hubs.map(hub => <option key={hub.id} value={hub.id}>{hub.name}</option>)}</select></label>
         <label className="text-sm">Rental amount (₹)<input required type="number" min="0" max="99999999.99" step="0.01" value={form.rental_amount} onChange={event => update('rental_amount', event.target.value)} className={inputClass} /></label>
+        <p className="self-center text-xs text-slate-500">Rental amount is calculated from the vehicle rate and rental duration. Each started day is charged as a full day; vehicles without a daily rate use hourly pricing. You can adjust the amount manually.</p>
         <label className="text-sm">Location charge (₹)<input required type="number" min="0" max="99999999.99" step="0.01" value={form.delivery_amount} onChange={event => { setFeeEdited(true); update('delivery_amount', event.target.value) }} className={inputClass} /></label>
         {pickupLocation && <p className="text-xs text-slate-500 sm:col-span-2">Location default: INR {Number(pickupLocation.effective_booking_amount || 0).toLocaleString('en-IN')}. <button type="button" className="font-medium text-teal-700 underline" onClick={() => { setFeeEdited(true); update('delivery_amount', pickupLocation.effective_booking_amount ?? '0') }}>Use location default</button></p>}
         <label className="text-sm sm:col-span-2">Notes (optional)<textarea maxLength={5000} rows={3} value={form.notes} onChange={event => update('notes', event.target.value)} className={inputClass} /></label>
