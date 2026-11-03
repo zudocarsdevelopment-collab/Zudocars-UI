@@ -421,6 +421,7 @@ export default function Dashboard() {
       badge: pendingBookings,
     },
     { id: "onTrip", label: "On Trip", icon: Car, badge: bookings.filter(booking => isOnTrip(booking, tripNow)).length },
+    { id: "sale", label: "Sale", icon: Wallet, badge: bookings.filter(booking => booking.status === "Completed" && booking.returnedAt).length },
     { id: "fleet", label: "Fleet", icon: Car },
     { id: "planning", label: "Planning Calendar", icon: CalendarDays },
     { id: "hubs", label: "Hubs & Locations", icon: MapPin },
@@ -711,10 +712,11 @@ export default function Dashboard() {
                 <Maintenance cars={cars} onServices={() => setTab("services")} />
               )}
               {tab === "services" && <ServiceManagement cars={cars} onFleetRefresh={async () => setCars((await getFleet()).cars)} />}
-              {(tab === "bookings" || tab === "onTrip") && (
+              {(tab === "bookings" || tab === "onTrip" || tab === "sale") && (
                 <Bookings
-                  bookings={tab === "onTrip" ? bookings.filter(booking => isOnTrip(booking, tripNow)) : bookings}
+                  bookings={tab === "onTrip" ? bookings.filter(booking => isOnTrip(booking, tripNow)) : tab === "sale" ? bookings.filter(booking => booking.status === "Completed" && booking.returnedAt) : bookings}
                   onTrip={tab === "onTrip"}
+                  sale={tab === "sale"}
                   now={tripNow}
                   staff={staff}
                   admin={isAdmin}
@@ -847,7 +849,7 @@ function Sidebar({
   user,
 }) {
   const nav = (
-    <nav className="mt-12 space-y-2">
+    <nav aria-label="Dashboard navigation" className="my-6 min-h-0 flex-1 space-y-2 overflow-y-auto">
       {tabs.map(({ id, label, icon: Icon, badge }) => (
         <button
           key={id}
@@ -870,16 +872,16 @@ function Sidebar({
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 flex-col bg-[#062f26] px-5 py-6 text-white lg:flex">
         <Brand />
         {nav}
-        <div className="mt-auto">
+        <div className="shrink-0 border-t border-white/15 pt-4">
           <p className="truncate text-sm font-bold">
             {user.name || user.email}
           </p>
           <p className="mt-1 text-xs capitalize text-[#047857]">{user.role}</p>
           <button
             onClick={onSignOut}
-            className="mt-5 flex items-center gap-2 text-sm text-white/55 hover:text-white"
+            className="mt-4 flex w-full items-center gap-2 rounded-xl bg-[#047857] px-4 py-3 text-sm font-semibold text-white hover:bg-[#065f46]"
           >
-            <LogOut className="h-4 w-4" /> Sign out
+            <LogOut className="h-4 w-4" /> Logout
           </button>
         </div>
       </aside>
@@ -892,7 +894,7 @@ function Sidebar({
       <aside
         className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-[#062f26] px-5 py-6 text-white transition-transform lg:hidden ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
-        <div className="flex items-center justify-between">
+        <div className="flex shrink-0 items-center justify-between">
           <Brand />
           <button onClick={() => setMobileOpen(false)}>
             <X className="h-5 w-5" />
@@ -901,9 +903,9 @@ function Sidebar({
         {nav}
         <button
           onClick={onSignOut}
-          className="mt-auto flex items-center gap-2 text-sm text-white/55"
+          className="flex shrink-0 items-center gap-2 rounded-xl bg-[#047857] px-4 py-3 text-sm font-semibold text-white hover:bg-[#065f46]"
         >
-          <LogOut className="h-4 w-4" /> Sign out
+          <LogOut className="h-4 w-4" /> Logout
         </button>
       </aside>
     </>
@@ -1314,6 +1316,7 @@ function Fleet({
 }
 function Bookings({
   onTrip = false,
+  sale = false,
   now,
   bookings,
   staff,
@@ -1338,10 +1341,11 @@ function Bookings({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex-1"><Toolbar title={onTrip ? 'On Trip' : 'Bookings'} query={query} setQuery={setQuery} /></div>
-        {!onTrip && <button onClick={onAdd} disabled={!!action} className="flex items-center gap-2 rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white"><Plus size={16} />Add booking</button>}
+        <div className="flex-1"><Toolbar title={sale ? 'Sale' : onTrip ? 'On Trip' : 'Bookings'} query={query} setQuery={setQuery} /></div>
+        {!onTrip && !sale && <button onClick={onAdd} disabled={!!action} className="flex items-center gap-2 rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white"><Plus size={16} />Add booking</button>}
         <button onClick={onRefresh} disabled={!!action} className="booking-action booking-action--neutral"><RefreshCw className={`h-3.5 w-3.5 ${action === 'refreshBookings' ? 'animate-spin' : ''}`} aria-hidden="true" />Refresh bookings</button>
       </div>
+      {sale && <p className="text-sm text-slate-500">Completed rental transactions after the vehicle has been returned. Open details to review the booking amount, return odometer and return notes.</p>}
       {onTrip && <p className="text-sm text-slate-500">Confirmed bookings whose pickup time has passed and whose vehicles have not been returned. Overdue vehicles stay here until their return is recorded.</p>}
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
@@ -1354,6 +1358,7 @@ function Bookings({
                   "Vehicle",
                   "Pickup",
                   "Dropoff",
+                  ...(sale ? ["Returned on"] : []),
                   "Amount",
                   "Status",
                   ...(admin ? ["Assigned staff"] : []),
@@ -1394,6 +1399,7 @@ function Bookings({
                   <td className="px-5 py-4 text-xs text-slate-500">
                     {booking.dropoff}
                   </td>
+                  {sale && <td className="px-5 py-4 text-xs text-slate-500">{new Date(booking.returnedAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</td>}
                   <td className="px-5 py-4 font-black">
                     {formatINR(booking.amount)}
                   </td>
@@ -1408,7 +1414,7 @@ function Bookings({
                   {admin && (
                     <td className="px-5 py-4">
                       <select
-                        disabled={action === "assignBooking"}
+                        disabled={sale || action === "assignBooking"}
                         title="Assign this booking"
                         value={booking.assignedEmail || ""}
                         onChange={(event) =>
@@ -1437,14 +1443,14 @@ function Bookings({
                         <BookingActionButton icon={Check} tone="primary" disabled={!!action} onClick={() => onStatus(booking, "Approved")}>Approve</BookingActionButton>
                         <BookingActionButton icon={XCircle} tone="danger" disabled={!!action} onClick={() => onStatus(booking, "Rejected")}>Reject</BookingActionButton>
                       </>}
-                      <BookingActionButton icon={Edit3} disabled={!!action} onClick={() => onEdit(booking)}>Edit booking</BookingActionButton>
-                      <BookingActionButton icon={FileText} disabled={!!action} onClick={() => onNotes(booking)}>Edit notes</BookingActionButton>
+                      {!sale && <BookingActionButton icon={Edit3} disabled={!!action} onClick={() => onEdit(booking)}>Edit booking</BookingActionButton>}
+                      {!sale && <BookingActionButton icon={FileText} disabled={!!action} onClick={() => onNotes(booking)}>Edit notes</BookingActionButton>}
                       <BookingActionButton icon={Eye} disabled={!!action} onClick={() => onView(booking)}>View details</BookingActionButton>
                     </div>
                   </td>
                 </tr>
               ))}
-              {!filtered.length && <tr><td colSpan={admin ? 9 : 8} className="px-5 py-12 text-center text-slate-500">{query ? 'No bookings match your search.' : onTrip ? 'No vehicles are currently on trip.' : 'No bookings yet.'}</td></tr>}
+              {!filtered.length && <tr><td colSpan={(admin ? 9 : 8) + (sale ? 1 : 0)} className="px-5 py-12 text-center text-slate-500">{query ? 'No bookings match your search.' : sale ? 'No completed transactions yet. Returned vehicles will appear here after their trips are completed.' : onTrip ? 'No vehicles are currently on trip.' : 'No bookings yet.'}</td></tr>}
             </tbody>
           </table>
         </div>
