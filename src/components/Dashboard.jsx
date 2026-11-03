@@ -15,6 +15,7 @@ import {
   Check,
   ClipboardList,
   Edit3,
+  Eye,
   ExternalLink,
   FileText,
   Fuel,
@@ -41,7 +42,9 @@ import ServiceManagement from "./ServiceManagement";
 import VehicleReturnModal from './VehicleReturnModal';
 import BulkDailyPriceModal from './BulkDailyPriceModal';
 import BookingNotesModal from './BookingNotesModal';
+import BookingDetailsModal from './BookingDetailsModal';
 import ManualBookingModal from './ManualBookingModal';
+import { isOnTrip, isTripOverdue } from '../lib/onTrip';
 import { readApiJson } from '../lib/apiResponse';
 
 const VEHICLES_API_URL =
@@ -300,6 +303,12 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
   const [tab, setTab] = useState("overview");
+  const [tripNow, setTripNow] = useState(Date.now);
+  useEffect(() => {
+    setTripNow(Date.now());
+    const timer = setInterval(() => setTripNow(Date.now()), 60000);
+    return () => clearInterval(timer);
+  }, []);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [cars, setCars] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -314,6 +323,7 @@ export default function Dashboard() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteError, setDeleteError] = useState('');
   const [notesBooking, setNotesBooking] = useState(null);
+  const [detailsBooking, setDetailsBooking] = useState(null);
   const [manualBookingOpen, setManualBookingOpen] = useState(false);
   const [editingBooking, setEditingBooking] = useState(null);
   const [adminPrompt, setAdminPrompt] = useState(null);
@@ -394,20 +404,19 @@ export default function Dashboard() {
     (member) => String(member.status).toLowerCase() === "pending",
   ).length;
 
-  // Fleet sits above Bookings and is visible to every signed-in role;
-  // only admins get the add/edit/delete controls inside the tab itself.
   const tabs = [
     { id: "overview", label: "Overview", icon: BarChart3 },
-    { id: "fleet", label: "Fleet", icon: Car },
-    { id: "hubs", label: "Locations & Hubs", icon: MapPin },
-    { id: "services", label: "Service Management", icon: ClipboardList },
-    { id: "maintenance", label: "Maintenance History", icon: Wrench },
     {
       id: "bookings",
       label: "Bookings",
       icon: CalendarDays,
       badge: pendingBookings,
     },
+    { id: "onTrip", label: "On Trip", icon: Car, badge: bookings.filter(booking => isOnTrip(booking, tripNow)).length },
+    { id: "fleet", label: "Fleet", icon: Car },
+    { id: "hubs", label: "Hubs & Locations", icon: MapPin },
+    { id: "services", label: "Service Management", icon: ClipboardList },
+    { id: "maintenance", label: "Maintenance History", icon: Wrench },
     ...(isAdmin
       ? [
           {
@@ -692,9 +701,11 @@ export default function Dashboard() {
                 <Maintenance cars={cars} onServices={() => setTab("services")} />
               )}
               {tab === "services" && <ServiceManagement cars={cars} onFleetRefresh={async () => setCars((await getFleet()).cars)} />}
-              {tab === "bookings" && (
+              {(tab === "bookings" || tab === "onTrip") && (
                 <Bookings
-                  bookings={bookings}
+                  bookings={tab === "onTrip" ? bookings.filter(booking => isOnTrip(booking, tripNow)) : bookings}
+                  onTrip={tab === "onTrip"}
+                  now={tripNow}
                   staff={staff}
                   admin={isAdmin}
                   currentUser={currentUser}
@@ -703,6 +714,7 @@ export default function Dashboard() {
                   onStatus={updateBookingStatus}
                   onAssign={assignBooking}
                   onNotes={setNotesBooking}
+                  onView={setDetailsBooking}
                   onAdd={() => { setEditingBooking(null); setManualBookingOpen(true); }}
                   onEdit={async booking => {
                     setAction('loadBooking');
@@ -753,7 +765,7 @@ export default function Dashboard() {
         onSave={async details => {
           const result = await updateLocalBooking(returnBooking.id, { status: 'completed', ...details });
           setBookings(items => items.map(item => item.id === returnBooking.id ? {
-            ...item, status: 'Completed', returnOdometer: result.return_odometer, returnNotes: result.return_notes,
+            ...item, status: 'Completed', returnOdometer: result.return_odometer, returnNotes: result.return_notes, returnedAt: result.returned_at,
           } : item));
           setCars(items => items.map(car => car.id === returnBooking.vehicleId ? { ...car, odometer: result.return_odometer } : car));
         }}
@@ -798,6 +810,7 @@ export default function Dashboard() {
         catch (error) { setError('Booking was saved. Refresh bookings to reload the list.'); }
       }} />}
       {notesBooking && <BookingNotesModal booking={notesBooking} onClose={() => setNotesBooking(null)} onSave={updateBookingNotes} />}
+      {detailsBooking && <BookingDetailsModal booking={detailsBooking} onClose={() => setDetailsBooking(null)} />}
       {adminPrompt && (
         <AdminKeyModal
           action={adminPrompt.actionName}
@@ -1290,6 +1303,8 @@ function Fleet({
   );
 }
 function Bookings({
+  onTrip = false,
+  now,
   bookings,
   staff,
   admin,
@@ -1299,6 +1314,7 @@ function Bookings({
   onStatus,
   onAssign,
   onNotes,
+  onView,
   onEdit,
   onAdd,
   onRefresh,
@@ -1312,10 +1328,11 @@ function Bookings({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex-1"><Toolbar title="Bookings" query={query} setQuery={setQuery} /></div>
-        <button onClick={onAdd} disabled={!!action} className="flex items-center gap-2 rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white"><Plus size={16} />Add booking</button>
-        <button onClick={onRefresh} disabled={!!action} className="rounded-lg border border-slate-200 px-4 py-2 text-sm">Refresh bookings</button>
+        <div className="flex-1"><Toolbar title={onTrip ? 'On Trip' : 'Bookings'} query={query} setQuery={setQuery} /></div>
+        {!onTrip && <button onClick={onAdd} disabled={!!action} className="flex items-center gap-2 rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white"><Plus size={16} />Add booking</button>}
+        <button onClick={onRefresh} disabled={!!action} className="booking-action booking-action--neutral"><RefreshCw className={`h-3.5 w-3.5 ${action === 'refreshBookings' ? 'animate-spin' : ''}`} aria-hidden="true" />Refresh bookings</button>
       </div>
+      {onTrip && <p className="text-sm text-slate-500">Confirmed bookings whose pickup time has passed and whose vehicles have not been returned. Overdue vehicles stay here until their return is recorded.</p>}
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1100px] text-left text-sm">
@@ -1371,7 +1388,7 @@ function Bookings({
                     {formatINR(booking.amount)}
                   </td>
                   <td className="px-5 py-4">
-                    <StatusPill status={booking.status} />
+                    {onTrip ? <span className={`inline-block whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold ${isTripOverdue(booking, now) ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>{isTripOverdue(booking, now) ? 'Overdue' : 'On trip'}</span> : <StatusPill status={booking.status} />}
                     {booking.assignedEmail === currentUser.email && (
                       <span className="ml-2 rounded-full bg-[#ecfdf5] px-2 py-1 text-[10px] font-bold text-[#047857]">
                         You
@@ -1400,42 +1417,24 @@ function Bookings({
                       </select>
                     </td>
                   )}
-                  <td className="px-5 py-4">
-                    <button disabled={!!action} onClick={() => onEdit(booking)} className="mb-2 mr-3 text-teal-700">Edit booking</button>
-                    <button disabled={!!action} onClick={() => onNotes(booking)} className="mb-2 text-blue-600">Edit notes</button>
-                    {booking.notes && <p className="mb-2 max-w-48 whitespace-pre-wrap text-xs text-slate-500">{booking.notes}</p>}
-                    {booking.returnOdometer != null && <p className="mb-2 text-xs text-slate-500">Returned at {Number(booking.returnOdometer).toLocaleString('en-IN')} km</p>}
-                    {booking.returnNotes && <p className="mb-2 max-w-48 whitespace-pre-wrap text-xs text-slate-500">Return: {booking.returnNotes}</p>}
-                    {booking.status === "Approved" && (
-                      <div className="flex gap-2">
-                        <button disabled={!!action} onClick={() => onStatus(booking, "Completed")} className="text-[#047857]">Return vehicle</button>
-                        <button disabled={!!action} onClick={() => onStatus(booking, "Rejected")} className="text-red-600">Cancel</button>
-                      </div>
-                    )}
-                    {booking.status === "Pending" && (
-                      <div className="flex gap-1">
-                        <button
-                          onClick={() => onStatus(booking, "Approved")}
-                          disabled={action === "updateBookingStatus"}
-                          className="rounded-lg p-2 text-[#047857] hover:bg-[#ecfdf5]"
-                        >
-                          <Check className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => onStatus(booking, "Rejected")}
-                          disabled={action === "updateBookingStatus"}
-                          className="rounded-lg p-2 text-red-600 hover:bg-red-50"
-                        >
-                          <XCircle className="h-4 w-4" />
-                        </button>
-                        {action === "updateBookingStatus" && (
-                          <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
-                        )}
-                      </div>
-                    )}
+                  <td className="px-5 py-4 align-top">
+                    <div className="grid min-w-[220px] grid-cols-2 gap-2">
+                      {booking.status === "Approved" && <>
+                        <BookingActionButton icon={Check} tone="primary" className="booking-action--return" disabled={!!action} onClick={() => onStatus(booking, "Completed")}>Return vehicle</BookingActionButton>
+                        <BookingActionButton icon={XCircle} tone="danger" disabled={!!action} onClick={() => onStatus(booking, "Rejected")}>Cancel</BookingActionButton>
+                      </>}
+                      {booking.status === "Pending" && <>
+                        <BookingActionButton icon={Check} tone="primary" disabled={!!action} onClick={() => onStatus(booking, "Approved")}>Approve</BookingActionButton>
+                        <BookingActionButton icon={XCircle} tone="danger" disabled={!!action} onClick={() => onStatus(booking, "Rejected")}>Reject</BookingActionButton>
+                      </>}
+                      <BookingActionButton icon={Edit3} disabled={!!action} onClick={() => onEdit(booking)}>Edit booking</BookingActionButton>
+                      <BookingActionButton icon={FileText} disabled={!!action} onClick={() => onNotes(booking)}>Edit notes</BookingActionButton>
+                      <BookingActionButton icon={Eye} disabled={!!action} onClick={() => onView(booking)}>View details</BookingActionButton>
+                    </div>
                   </td>
                 </tr>
               ))}
+              {!filtered.length && <tr><td colSpan={admin ? 9 : 8} className="px-5 py-12 text-center text-slate-500">{query ? 'No bookings match your search.' : onTrip ? 'No vehicles are currently on trip.' : 'No bookings yet.'}</td></tr>}
             </tbody>
           </table>
         </div>
@@ -1443,6 +1442,12 @@ function Bookings({
     </div>
   );
 }
+function BookingActionButton({ icon: Icon, tone = 'neutral', className = '', children, ...props }) {
+  return <button type="button" className={`booking-action booking-action--${tone} ${className}`} {...props}>
+    <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />{children}
+  </button>;
+}
+
 function Staff({ staff, query, setQuery, onEdit, onStatus, onDelete, action }) {
   const filtered = staff.filter((member) =>
     `${member.name} ${member.email} ${member.department}`
@@ -1609,27 +1614,18 @@ function ModalActions({ onClose, onConfirm, loading, label }) {
   );
 }
 function CarFormModal({ car, onClose, onSave, loading }) {
-  const { hubs, error: hubError } = usePickupHubs();
+  const { hubs, error: hubError, loading: locationsLoading } = usePickupHubs();
   const [form, setForm] = useState(car);
-  const [locations, setLocations] = useState([]);
-  const [locationsLoading, setLocationsLoading] = useState(true);
-  const [locationError, setLocationError] = useState('');
-  useEffect(() => {
-    let active = true;
-    fetch(apiUrl('/api/locations/')).then(response => readApiJson(response, 'Unable to load locations.'))
-      .then(data => { if (active) setLocations(data); })
-      .catch(error => { if (active) setLocationError(error.message); })
-      .finally(() => { if (active) setLocationsLoading(false); });
-    return () => { active = false; };
-  }, []);
+  const locations = hubs;
+  const locationError = hubError;
   const update = (field, value) =>
     setForm((current) => ({ ...current, [field]: value }));
   return (
     <Modal title={car.id ? "Edit vehicle" : "Add vehicle"} onClose={onClose}>
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="text-sm font-semibold text-slate-700">Pickup hub
+        <label className="text-sm font-semibold text-slate-700">Pickup location
           <select value={form.pickupHub || ''} onChange={(event) => update('pickupHub', event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5">
-            <option value="">Choose a hub</option>
+            <option value="">Choose a location</option>
             {hubs.map((hub) => <option key={hub.id} value={hub.id}>{hub.name}</option>)}
           </select>
           {hubError && <span className="text-red-600">{hubError}</span>}
@@ -1643,7 +1639,7 @@ function CarFormModal({ car, onClose, onSave, loading }) {
             {locations.map(location => <option key={location.id} value={location.name}>{location.name}</option>)}
           </select>
           {locationError && <p role="alert" className="mt-1 text-sm text-red-600">{locationError}</p>}
-          {!locationsLoading && !locationError && !locations.length && <p className="mt-1 text-xs text-slate-500">Add locations in Locations &amp; Hubs to choose them here.</p>}
+          {!locationsLoading && !locationError && !locations.length && <p className="mt-1 text-xs text-slate-500">Add locations in Hubs &amp; Locations to choose them here.</p>}
         </div>
 
         {[
@@ -1869,6 +1865,9 @@ async function getBookings() {
     id: booking.reference,
     backendRecord: true,
     vehicleId: booking.vehicle,
+    startDatetime: booking.start_datetime,
+    endDatetime: booking.end_datetime,
+    returnedAt: booking.returned_at,
     pickupOdometer: booking.pickup_odometer,
     returnOdometer: booking.return_odometer,
     returnNotes: booking.return_notes,

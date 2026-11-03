@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import usePickupHubs from '../lib/usePickupHubs'
+import CustomerFields from './CustomerFields'
 
 function indiaDateTime(value) {
   if (!value) return ''
@@ -11,9 +12,16 @@ export default function ManualBookingModal({ cars, booking, onClose, onSave }) {
   const dialogRef = useRef(null)
   const { hubs, error: hubError } = usePickupHubs()
   const [form, setForm] = useState({ cart_vehicle: '', customer_name: '', customer_phone: '', customer_email: '', start: '', end: '', dropoff_location_id: '', rental_amount: '', delivery_amount: '0', notes: '', ...(booking ? { cart_vehicle: String(booking.vehicle), customer_name: booking.customer_name, customer_phone: booking.customer_phone, customer_email: booking.customer_email || '', start: indiaDateTime(booking.start_datetime), end: indiaDateTime(booking.end_datetime), dropoff_location_id: String(booking.dropoff_location_id), rental_amount: booking.rental_amount, delivery_amount: booking.delivery_amount, notes: booking.notes || '' } : {}) })
+  const [feeEdited, setFeeEdited] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const car = cars.find(car => String(car.id) === form.cart_vehicle)
+  const pickupLocation = hubs.find(location => location.id === Number(car?.pickupHub))
+  useEffect(() => {
+    if (!booking && !feeEdited && pickupLocation) {
+      setForm(current => ({ ...current, delivery_amount: pickupLocation.effective_booking_amount ?? '0' }))
+    }
+  }, [booking, feeEdited, pickupLocation])
   useEffect(() => { const dialog = dialogRef.current; dialog.showModal(); return () => dialog.close() }, [])
   const update = (key, value) => setForm(current => ({ ...current, [key]: value }))
   const historical = form.end && new Date(`${form.end}+05:30`) <= new Date()
@@ -37,21 +45,21 @@ export default function ManualBookingModal({ cars, booking, onClose, onSave }) {
     <p className="mt-2 text-sm text-slate-500">{booking ? 'Correct the booking details below. Saving keeps its current status and return records.' : 'Enter a new or old booking. Past returns are saved as completed; other bookings are confirmed.'} Dates and times are in India time.</p>
     <form onSubmit={save} className="mt-5 space-y-4">
       <fieldset disabled={saving} className="grid gap-4 sm:grid-cols-2">
-        <label className="text-sm sm:col-span-2">Vehicle<select autoFocus required value={form.cart_vehicle} onChange={event => update('cart_vehicle', event.target.value)} className={inputClass}><option value="">Select vehicle</option>{cars.map(car => <option key={car.id} value={car.id}>{car.model} Â· {car.plateNumber}</option>)}</select></label>
-        <label className="text-sm">Customer name<input required maxLength={150} value={form.customer_name} onChange={event => update('customer_name', event.target.value)} className={inputClass} /></label>
-        <label className="text-sm">Phone<input required type="tel" pattern="\+?[0-9]{10,15}" title="10â€“15 digits, optionally starting with +" value={form.customer_phone} onChange={event => update('customer_phone', event.target.value)} className={inputClass} /></label>
-        <label className="text-sm sm:col-span-2">Email (optional)<input type="email" value={form.customer_email} onChange={event => update('customer_email', event.target.value)} className={inputClass} /></label>
+        <label className="text-sm sm:col-span-2">Vehicle<select autoFocus required value={form.cart_vehicle} onChange={event => update('cart_vehicle', event.target.value)} className={inputClass}><option value="">Select vehicle</option>{cars.map(car => <option key={car.id} value={car.id}>{car.model} · {car.plateNumber}</option>)}</select></label>
+        <CustomerFields name={form.customer_name} phone={form.customer_phone} email={form.customer_email} disabled={saving} inputClass={inputClass}
+          onChange={details => setForm(current => ({ ...current, ...details }))} />
         <label className="text-sm">Pickup date & time<input required type="datetime-local" step="1" value={form.start} onChange={event => update('start', event.target.value)} className={inputClass} /></label>
         <label className="text-sm">Return date & time<input required type="datetime-local" step="1" value={form.end} onChange={event => update('end', event.target.value)} className={inputClass} /></label>
-        <p className="self-center text-sm">Pickup hub: {car?.locationBase || 'Select a vehicle'}</p>
-        <label className="text-sm">Return hub<select required value={form.dropoff_location_id} onChange={event => update('dropoff_location_id', event.target.value)} className={inputClass}><option value="">Select return hub</option>{hubs.map(hub => <option key={hub.id} value={hub.id}>{hub.name}</option>)}</select></label>
-        <label className="text-sm">Rental amount (â‚¹)<input required type="number" min="0" max="99999999.99" step="0.01" value={form.rental_amount} onChange={event => update('rental_amount', event.target.value)} className={inputClass} /></label>
-        <label className="text-sm">Delivery amount (â‚¹)<input required type="number" min="0" max="99999999.99" step="0.01" value={form.delivery_amount} onChange={event => update('delivery_amount', event.target.value)} className={inputClass} /></label>
+        <p className="self-center text-sm">Pickup location: {car?.locationBase || 'Select a vehicle'}</p>
+        <label className="text-sm">Return location<select required value={form.dropoff_location_id} onChange={event => update('dropoff_location_id', event.target.value)} className={inputClass}><option value="">Select return location</option>{hubs.map(hub => <option key={hub.id} value={hub.id}>{hub.name}</option>)}</select></label>
+        <label className="text-sm">Rental amount (₹)<input required type="number" min="0" max="99999999.99" step="0.01" value={form.rental_amount} onChange={event => update('rental_amount', event.target.value)} className={inputClass} /></label>
+        <label className="text-sm">Location charge (₹)<input required type="number" min="0" max="99999999.99" step="0.01" value={form.delivery_amount} onChange={event => { setFeeEdited(true); update('delivery_amount', event.target.value) }} className={inputClass} /></label>
+        {pickupLocation && <p className="text-xs text-slate-500 sm:col-span-2">Location default: INR {Number(pickupLocation.effective_booking_amount || 0).toLocaleString('en-IN')}. <button type="button" className="font-medium text-teal-700 underline" onClick={() => { setFeeEdited(true); update('delivery_amount', pickupLocation.effective_booking_amount ?? '0') }}>Use location default</button></p>}
         <label className="text-sm sm:col-span-2">Notes (optional)<textarea maxLength={5000} rows={3} value={form.notes} onChange={event => update('notes', event.target.value)} className={inputClass} /></label>
       </fieldset>
-      <p className="text-sm font-medium">Total: â‚¹{(Number(form.rental_amount) + Number(form.delivery_amount)).toLocaleString('en-IN')} Â· {booking ? booking.status : historical ? 'Completed' : 'Confirmed'}</p>
+      <p className="text-sm font-medium">Total: ₹{(Number(form.rental_amount) + Number(form.delivery_amount)).toLocaleString('en-IN')} · {booking ? booking.status : historical ? 'Completed' : 'Confirmed'}</p>
       {(error || hubError) && <p role="alert" className="text-sm text-red-600">{error || hubError}</p>}
-      <div className="flex justify-end gap-3"><button type="button" disabled={saving} onClick={onClose} className="rounded-lg border px-4 py-2">Cancel</button><button disabled={saving || !car || !hubs.length} className="rounded-lg bg-teal-700 px-4 py-2 text-white disabled:opacity-50">{saving ? 'Savingâ€¦' : booking ? 'Save changes' : 'Add booking'}</button></div>
+      <div className="flex justify-end gap-3"><button type="button" disabled={saving} onClick={onClose} className="rounded-lg border px-4 py-2">Cancel</button><button disabled={saving || !car || !hubs.length} className="rounded-lg bg-teal-700 px-4 py-2 text-white disabled:opacity-50">{saving ? 'Saving…' : booking ? 'Save changes' : 'Add booking'}</button></div>
     </form>
   </dialog>
 }

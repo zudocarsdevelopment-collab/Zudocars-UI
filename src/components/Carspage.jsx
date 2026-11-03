@@ -180,8 +180,8 @@ function buildBookingEnquiryMessage({ car, searchParams, customerName, customerP
     `Vehicle: ${car.name} (${car.plate})`,
     `Fuel: ${car.fuel} · Transmission: ${car.transmission}`,
     `Trip: ${searchParams.date_from} ${searchParams.time_from} → ${searchParams.date_to} ${searchParams.time_to}`,
-    `Pickup location: ${(searchParams.pickup_location_name || `Hub #${searchParams.pickup_location_id}`)}`,
-    `Dropoff location: ${(searchParams.dropoff_location_name || `Hub #${searchParams.dropoff_location_id}`)}`,
+    `Pickup location: ${(searchParams.pickup_location_name || `Location #${searchParams.pickup_location_id}`)}`,
+    `Dropoff location: ${(searchParams.dropoff_location_name || `Location #${searchParams.dropoff_location_id}`)}`,
     '',
     `Customer: ${customerName}`,
     `Phone: +91 ${customerPhone}`,
@@ -484,15 +484,13 @@ function BookingModal({ car, searchParams, onClose }) {
   const [estimateResult, setEstimateResult] = useState(null)
   const [pdfUrl, setPdfUrl] = useState(null)
 
-  const pickupLocationName = (searchParams.pickup_location_name || `Hub #${searchParams.pickup_location_id}`)
+  const pickupLocationName = (searchParams.pickup_location_name || `Location #${searchParams.pickup_location_id}`)
 
   const ADVANCE_AMOUNT = 2000
-  const BASE_TO_DELIVERY_FEE = car.deliveryAmount / 2
-  const RETURN_TO_BASE_FEE = car.deliveryAmount / 2
 
   const baseFare = car.price
   const depositAmount = 5000
-  const totalPayable = baseFare + BASE_TO_DELIVERY_FEE + RETURN_TO_BASE_FEE + depositAmount
+  const totalPayable = baseFare + car.deliveryAmount + depositAmount
   const balanceDueOnPickup = Math.max(totalPayable - ADVANCE_AMOUNT, 0)
 
   const canGoToStep2 = customerName.trim().length > 1 && customerPhone.trim().length >= 10 && agreeTerms
@@ -515,8 +513,8 @@ function BookingModal({ car, searchParams, onClose }) {
       pickup_location_id: searchParams.pickup_location_id,
       dropoff_location_id: searchParams.dropoff_location_id,
       cart_vehicle: car.id,
-      pickup_custom_payload: (searchParams.pickup_location_name || `Hub #${searchParams.pickup_location_id}`),
-      dropoff_custom_payload: (searchParams.dropoff_location_name || `Hub #${searchParams.dropoff_location_id}`),
+      pickup_custom_payload: (searchParams.pickup_location_name || `Location #${searchParams.pickup_location_id}`),
+      dropoff_custom_payload: (searchParams.dropoff_location_name || `Location #${searchParams.dropoff_location_id}`),
     }
 
     try {
@@ -682,7 +680,7 @@ function BookingModal({ car, searchParams, onClose }) {
                   {searchParams.time_to}
                 </p>
                 <p>Pickup branch: {pickupLocationName}</p>
-                <p className="pt-1 text-gray-400">Self pickup only — collect at this branch, no delivery fee.</p>
+                <p className="pt-1 text-gray-400">Self pickup — collect at this location. The location charge is included in your fare summary.</p>
               </div>
             </div>
 
@@ -730,12 +728,8 @@ function BookingModal({ car, searchParams, onClose }) {
                       <span className="font-medium text-gray-900">{formatINR(baseFare)}</span>
                     </div>
                     <div className="flex justify-between text-gray-600">
-                      <span>Base to delivery</span>
-                      <span className="font-medium text-gray-900">{formatINR(BASE_TO_DELIVERY_FEE)}</span>
-                    </div>
-                    <div className="flex justify-between text-gray-600">
-                      <span>Return to base</span>
-                      <span className="font-medium text-gray-900">{formatINR(RETURN_TO_BASE_FEE)}</span>
+                      <span>Location charge</span>
+                      <span className="font-medium text-gray-900">{formatINR(car.deliveryAmount)}</span>
                     </div>
                     <div className="flex justify-between text-gray-600">
                       <span>Refundable security deposit</span>
