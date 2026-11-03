@@ -683,13 +683,13 @@ export default function Dashboard() {
           ) : (
             <>
               {tab === "overview" && (
-                <div className="space-y-8"><PlanningCalendar cars={cars} bookings={bookings} now={tripNow} onView={setDetailsBooking} onRefresh={refreshPlanningData} /><Overview
+                <Overview
                   cars={cars}
                   bookings={bookings}
                   staff={staff}
                   onBookings={() => setTab("bookings")}
                   onFleet={() => setTab("fleet")}
-                /></div>
+                />
               )}
               {tab === "planning" && <PlanningCalendar cars={cars} bookings={bookings} now={tripNow} onView={setDetailsBooking} onRefresh={refreshPlanningData} />}
               {tab === "fleet" && (
